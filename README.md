@@ -1,11 +1,24 @@
 # Wrapped
 
-Personal music listening analyzer for your Spotify Extended Streaming History.
-Runs entirely in the browser: DuckDB-WASM executes the analytics SQL locally
-and the imported history is persisted as a parquet snapshot in OPFS, so your
-data never leaves your machine.
+Wrapped is a private, browser-based analyzer for your Spotify Extended
+Streaming History. Import your Spotify data export to explore long-term
+listening habits, favorite tracks and artists, yearly trends, and detailed
+play history.
 
-Live at https://wrapped.chaiky.dev
+All processing happens locally in your browser. DuckDB-WASM runs the analytics
+queries and stores the imported history as a parquet snapshot in OPFS, so your
+listening data never leaves your device.
+
+**Live app:** [ruxxzebre.github.io/wrapped](https://ruxxzebre.github.io/wrapped)
+
+## Features
+
+- Listening summaries and year-in-review reports
+- Top tracks and artists with detailed breakdowns
+- Listening calendar, play log, and library views
+- Time-of-day and weekday listening patterns
+- Year-over-year comparisons
+- Local, private data processing with no backend
 
 ## Usage
 
@@ -40,16 +53,6 @@ pnpm dev          # http://localhost:5173
 - `pnpm build` — typecheck + production build into `dist/`
 - `pnpm preview` — serve the production build locally
 - `pnpm check` — Biome lint + format + import sort, with `--write`
-
-## Docker
-
-```sh
-docker build -t wrapped .
-docker run --rm -p 8080:80 wrapped
-```
-
-The image builds the app with pnpm and serves `dist/` via Caddy. Any static
-file server works equally well — there is no backend.
 
 ## Data notes
 

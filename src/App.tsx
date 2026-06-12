@@ -146,7 +146,7 @@ export default function App() {
 						·{" "}
 						<a
 							className={css.footerLink}
-							href="https://github.com/ruxxzebre"
+							href="https://github.com/ruxxzebre/wrapped"
 							target="_blank"
 							rel="noopener noreferrer"
 						>
