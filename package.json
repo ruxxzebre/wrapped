@@ -1,0 +1,39 @@
+{
+	"name": "frontend",
+	"private": true,
+	"version": "0.0.0",
+	"type": "module",
+	"packageManager": "pnpm@10.14.0",
+	"scripts": {
+		"dev": "vite",
+		"build": "tsc && vite build",
+		"preview": "vite preview",
+		"lint": "biome lint .",
+		"lint:fix": "biome lint --write .",
+		"format": "biome format --write .",
+		"format:check": "biome format .",
+		"check": "biome check --write ."
+	},
+	"devDependencies": {
+		"@biomejs/biome": "^2.5.0",
+		"@types/react": "^19.2.17",
+		"@types/react-dom": "^19.2.3",
+		"@vitejs/plugin-react": "^6.0.2",
+		"typescript": "~6.0.2",
+		"vite": "^8.0.12"
+	},
+	"dependencies": {
+		"@duckdb/duckdb-wasm": "1.33.1-dev45.0",
+		"@fontsource-variable/figtree": "^5.2.10",
+		"@tanstack/react-query": "^5.101.0",
+		"@tanstack/react-router": "^1.170.15",
+		"@tanstack/react-virtual": "^3.14.2",
+		"@vanilla-extract/css": "^1.20.1",
+		"@vanilla-extract/vite-plugin": "^5.2.2",
+		"apache-arrow": "17.0.0",
+		"fflate": "^0.8.3",
+		"react": "^19.2.7",
+		"react-dom": "^19.2.7",
+		"recharts": "^3.8.1"
+	}
+}

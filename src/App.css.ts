@@ -1,0 +1,155 @@
+import { style } from "@vanilla-extract/css";
+import { contentPad, vars } from "./ui/theme.css";
+
+const mobile = "screen and (max-width: 768px)";
+
+export const shell = style({
+	vars: { [contentPad]: "1.5rem" },
+	display: "flex",
+	height: "100dvh",
+	overflow: "hidden",
+	"@media": {
+		[mobile]: {
+			vars: { [contentPad]: "1rem" },
+			flexDirection: "column",
+		},
+	},
+});
+
+// Slim top bar shown only on mobile, holding the drawer toggle and brand.
+export const menuBar = style({
+	display: "none",
+	"@media": {
+		[mobile]: {
+			display: "flex",
+			alignItems: "center",
+			gap: vars.space.sm,
+			flexShrink: 0,
+			padding: `${vars.space.sm} ${vars.space.md}`,
+			background: vars.color.sidebarBg,
+			borderBottom: `1px solid ${vars.color.hairline}`,
+		},
+	},
+});
+
+export const menuButton = style({
+	display: "inline-flex",
+	alignItems: "center",
+	justifyContent: "center",
+	width: "2.25rem",
+	height: "2.25rem",
+	border: "none",
+	borderRadius: vars.radius.md,
+	background: "transparent",
+	color: vars.color.text,
+	fontSize: "1.25rem",
+	lineHeight: 1,
+	cursor: "pointer",
+	transition: "background-color 150ms",
+	selectors: {
+		"&:hover": { background: vars.color.panelHover },
+	},
+});
+
+export const sidebar = style({
+	width: "232px",
+	flexShrink: 0,
+	display: "flex",
+	flexDirection: "column",
+	gap: vars.space.md,
+	padding: vars.space.xl,
+	background: vars.color.sidebarBg,
+	overflowY: "auto",
+	"@media": {
+		[mobile]: {
+			position: "fixed",
+			top: 0,
+			left: 0,
+			bottom: 0,
+			width: "min(78vw, 300px)",
+			zIndex: 100,
+			transform: "translateX(-100%)",
+			transition: "transform 200ms ease",
+		},
+	},
+});
+
+// Drawer open state — only meaningful at mobile width, where the base sidebar
+// is translated off-canvas.
+export const sidebarOpen = style({
+	"@media": {
+		[mobile]: { transform: "translateX(0)" },
+	},
+});
+
+export const backdrop = style({
+	display: "none",
+	"@media": {
+		[mobile]: {
+			display: "block",
+			position: "fixed",
+			inset: 0,
+			zIndex: 90,
+			background: "rgba(0, 0, 0, 0.5)",
+		},
+	},
+});
+
+export const brand = style({
+	color: vars.color.text,
+	textDecoration: "none",
+	fontSize: vars.font.xl,
+	fontWeight: 800,
+	letterSpacing: "-0.02em",
+	whiteSpace: "nowrap",
+	padding: `${vars.space.sm} ${vars.space.md}`,
+	transition: "color 150ms",
+	selectors: { "&:hover": { color: vars.color.accentHover } },
+});
+
+export const navList = style({
+	display: "flex",
+	flexDirection: "column",
+	gap: vars.space.xs,
+});
+
+export const main = style({
+	flex: 1,
+	minWidth: 0,
+	overflowY: "auto",
+	background: vars.color.bg,
+	containerType: "inline-size",
+});
+
+export const content = style({
+	maxWidth: "1400px",
+	margin: "0 auto",
+	padding: `0 ${contentPad} 2rem`,
+});
+
+export const footer = style({
+	maxWidth: "1400px",
+	margin: "0 auto",
+	padding: `1.5rem ${contentPad} 2.5rem`,
+	borderTop: `1px solid ${vars.color.hairline}`,
+	display: "flex",
+	flexWrap: "wrap",
+	gap: vars.space.md,
+	justifyContent: "space-between",
+	alignItems: "center",
+	color: vars.color.muted,
+	fontSize: vars.font.sm,
+	lineHeight: 1.5,
+});
+
+export const footerAbout = style({
+	maxWidth: "60ch",
+});
+
+export const footerLink = style({
+	color: vars.color.muted,
+	textDecoration: "none",
+	fontWeight: 600,
+	transition: "color 150ms",
+	selectors: { "&:hover": { color: vars.color.accentHover } },
+});
