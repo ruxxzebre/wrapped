@@ -4,9 +4,10 @@ import { defineConfig } from "vite";
 
 // https://vite.dev/config/
 export default defineConfig({
-	plugins: [vanillaExtractPlugin(), react()],
-	optimizeDeps: {
-		// esbuild pre-bundling breaks duckdb-wasm's wasm/worker URL resolution.
-		exclude: ["@duckdb/duckdb-wasm"],
-	},
+  base: "./",
+  plugins: [vanillaExtractPlugin(), react()],
+  optimizeDeps: {
+    // esbuild pre-bundling breaks duckdb-wasm's wasm/worker URL resolution.
+    exclude: ["@duckdb/duckdb-wasm"],
+  },
 });
