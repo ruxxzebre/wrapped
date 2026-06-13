@@ -1,19 +1,23 @@
 import * as duckdb from "@duckdb/duckdb-wasm";
 import ehWorkerUrl from "@duckdb/duckdb-wasm/dist/duckdb-browser-eh.worker.js?url";
-import mvpWorkerUrl from "@duckdb/duckdb-wasm/dist/duckdb-browser-mvp.worker.js?url";
 import ehWasmUrl from "@duckdb/duckdb-wasm/dist/duckdb-eh.wasm?url";
-import mvpWasmUrl from "@duckdb/duckdb-wasm/dist/duckdb-mvp.wasm?url";
 import { type Table, Type } from "apache-arrow";
 import { setBootStatus } from "./boot";
 
 // DuckDB-WASM bootstrap. Bundles are vite-bundled (?url imports) rather than
 // pulled from jsdelivr so the app stays fully static and same-origin. The
 // async build runs in a plain worker — no SharedArrayBuffer, no COOP/COEP.
+//
+// We ship only the `eh` (exception-handling) build. selectBundle returns `eh`
+// whenever the engine supports WASM exceptions (every browser since ~2022) and
+// only falls back to the required `mvp` slot otherwise — so we point `mvp` at
+// the same eh asset. Both keys are the one `?url` import, so vite emits a
+// single binary: the unused 41 MB mvp wasm + its worker no longer bloat the
+// deploy. Pre-2022 engines that lack exceptions also lack OPFS/createWritable
+// and can't run this app anyway, so the degenerate fallback is acceptable.
 
-const BUNDLES: duckdb.DuckDBBundles = {
-	mvp: { mainModule: mvpWasmUrl, mainWorker: mvpWorkerUrl },
-	eh: { mainModule: ehWasmUrl, mainWorker: ehWorkerUrl },
-};
+const ehBundle = { mainModule: ehWasmUrl, mainWorker: ehWorkerUrl };
+const BUNDLES: duckdb.DuckDBBundles = { mvp: ehBundle, eh: ehBundle };
 
 let dbPromise: Promise<duckdb.AsyncDuckDB> | null = null;
 let connPromise: Promise<duckdb.AsyncDuckDBConnection> | null = null;
