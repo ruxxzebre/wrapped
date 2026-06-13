@@ -1,12 +1,14 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../api";
 import { fmtInt } from "../format";
+import { useT } from "../i18n";
 import { ArtistLink, TrackLink } from "../links";
 import { Muted, Panel, Skeleton } from "../ui";
 import * as css from "./OnThisDay.css";
 
 // "This day in your history" — top track of the same week in each past year.
 export default function OnThisDay() {
+	const t = useT();
 	const { data, isLoading } = useQuery({
 		queryKey: ["onThisDay"],
 		queryFn: api.onThisDay,
@@ -18,21 +20,25 @@ export default function OnThisDay() {
 
 	const thisYear = new Date().getFullYear();
 	return (
-		<Panel title="On this day">
+		<Panel title={t("onThisDay.title")}>
 			<div className={css.list}>
 				{data.map((o) => {
 					const ago = thisYear - o.year;
 					return (
 						<div className={css.row} key={o.year}>
 							<span className={css.when}>
-								{ago <= 0 ? "this week" : `${ago}y ago`}
+								{ago <= 0
+									? t("onThisDay.thisWeek")
+									: t("onThisDay.yearsAgo", { count: ago })}
 							</span>
 							<span className={css.track}>
 								<TrackLink uri={o.track_uri} name={o.name} />
 								<Muted> · </Muted>
 								<ArtistLink name={o.artist} muted />
 							</span>
-							<span className={css.plays}>{fmtInt(o.plays)} plays</span>
+							<span className={css.plays}>
+								{t("count.plays", { count: o.plays, n: fmtInt(o.plays) })}
+							</span>
 						</div>
 					);
 				})}
@@ -47,8 +53,9 @@ const SKELETON_ROWS = ["s1", "s2", "s3", "s4"];
 // Mirrors the loaded layout (Panel + 70px / 1fr / auto grid rows) so swapping in
 // real data doesn't move anything on the page.
 function OnThisDaySkeleton() {
+	const t = useT();
 	return (
-		<Panel title="On this day">
+		<Panel title={t("onThisDay.title")}>
 			<div className={css.list} aria-busy="true">
 				{SKELETON_ROWS.map((k) => (
 					<div className={css.row} key={k}>

@@ -1,0 +1,280 @@
+// English catalog — the single source of truth for the app's copy. Every other
+// language is typed against these keys (see Catalog in ./index) and may supply a
+// subset; anything missing falls back to the English string here.
+//
+// Conventions:
+//  - Keys are flat and dotted: "namespace.thing".
+//  - "{name}" placeholders are filled at render time (numbers, dates, nodes).
+//  - Plural strings come in "_one"/"_other" (and "_few"/"_many" for Slavic
+//    languages) variants; callers pass { count } and the right form is picked
+//    via Intl.PluralRules. The base key (without suffix) is what you call.
+export const en = {
+	// --- app shell ---------------------------------------------------------
+	"app.openMenu": "Open menu",
+	"app.closeMenu": "Close menu",
+	"app.search": "search",
+	"app.footer.about":
+		"a self-hosted analyzer for your Spotify listening history. Import your extended streaming export to explore trends, top tracks and artists, and your taste over time. All data stays on your machine.",
+	"app.footer.builtBy": "Built by",
+
+	// --- navigation (keyed by tab slug) ------------------------------------
+	"nav./": "Summary",
+	"nav./story": "Story",
+	"nav./top-tracks": "Top Tracks",
+	"nav./top-artists": "Top Artists",
+	"nav./patterns": "Patterns",
+	"nav./calendar": "Calendar",
+	"nav./library": "Library",
+	"nav./play-log": "Play Log",
+	"nav./compare": "Compare",
+	"nav./import": "Import",
+	"nav./settings": "Settings",
+
+	// --- shared controls ---------------------------------------------------
+	"controls.rankBy": "rank by",
+	"controls.period": "period",
+	"controls.from": "from",
+	"controls.to": "to",
+	"controls.minSeconds": "min seconds",
+	"controls.limit": "limit",
+	"controls.year": "year",
+	"controls.search": "search",
+	"period.all": "all time",
+	"period.custom": "custom",
+	"metric.plays": "plays",
+	"metric.time": "time",
+
+	// --- shared table columns ---------------------------------------------
+	"col.rank": "#",
+	"col.track": "track",
+	"col.artist": "artist",
+	"col.album": "album",
+	"col.plays": "plays",
+	"col.hours": "hours",
+	"col.tracks": "tracks",
+	"col.last": "last",
+	"col.skip": "skip",
+	"col.playedAt": "played at",
+	"col.for": "for",
+	"col.platform": "platform",
+	"col.move": "move",
+	"col.aRank": "A rank",
+	"col.bRank": "B rank",
+	"col.aValue": "A {unit}",
+	"col.bValue": "B {unit}",
+
+	// --- shared bits -------------------------------------------------------
+	"common.cancel": "Cancel",
+	"common.dash": "—",
+	"unit.plays": "plays",
+	"unit.hrs": "hrs",
+	// Plural strings: pass { count } to pick the form and { n } for the displayed
+	// (locale-grouped) number — count drives Intl.PluralRules, n is shown.
+	"count.plays_one": "{n} play",
+	"count.plays_other": "{n} plays",
+	"count.days_one": "{n} day",
+	"count.days_other": "{n} days",
+
+	// --- status / splash ---------------------------------------------------
+	"status.loading": "loading…",
+
+	// --- Summary -----------------------------------------------------------
+	"card.plays": "plays",
+	"card.hours": "hours",
+	"card.tracks": "tracks",
+	"card.artists": "artists",
+	"card.skips": "skips",
+	"card.since": "since",
+	"summary.streamsSub": "{count} ≥30s streams",
+	"summary.latest": "latest {date}",
+	"summary.pctOfPlays": "{pct} of plays",
+	"summary.hoursPerYear": "Hours per year",
+	"summary.playsPerYear": "Plays per year",
+
+	// --- On this day -------------------------------------------------------
+	"onThisDay.title": "On this day",
+	"onThisDay.thisWeek": "this week",
+	"onThisDay.yearsAgo": "{count}y ago",
+
+	// --- Patterns ----------------------------------------------------------
+	"patterns.byHour": "Listening by hour of day (local start time)",
+	"patterns.byWeekday": "Listening by day of week",
+
+	// --- Calendar ----------------------------------------------------------
+	"calendar.summary": "{hours} hours over {days} active days in {year}",
+	"calendar.less": "less",
+	"calendar.more": "more",
+	"calendar.activityTitle": "Listening activity by day",
+	"calendar.dayPlays": "{plays} plays · {hours} h",
+	"calendar.noPlays": "no plays",
+
+	// --- Library -----------------------------------------------------------
+	"library.searchPlaceholder": "track / artist / album",
+	"library.countOf": "{shown} of {total} tracks",
+
+	// --- Play Log ----------------------------------------------------------
+	"playLog.searchPlaceholder": "track / artist",
+	"playLog.loadingMore": "loading more…",
+
+	// --- Compare -----------------------------------------------------------
+	"compare.compare": "compare",
+	"compare.artists": "artists",
+	"compare.tracks": "tracks",
+
+	// --- Settings ----------------------------------------------------------
+	"settings.playback": "Playback",
+	"settings.showPlayer": "Show embedded Spotify player",
+	"settings.showPlayerHint":
+		"Renders an in-page player on each track page. Hidden automatically when a track isn't available on Spotify.",
+	"settings.time": "Time",
+	"settings.timezone": "Timezone",
+	"settings.timezoneHint":
+		"Hour-of-day, weekday and calendar charts bucket plays in this timezone. Defaults to your browser's. Pick the timezone you actually lived in if it differs.",
+	"settings.language": "Language",
+	"settings.languageAuto": "Automatic (match system)",
+	"settings.languageHint":
+		"Language used across the interface. Defaults to your system language when available, otherwise English.",
+	"settings.dangerZone": "Danger zone",
+	"settings.clearLibrary": "Clear library",
+	"settings.clearing": "Clearing…",
+	"settings.deleteImported": "Delete imported data",
+	"settings.clearLibraryHint":
+		"Wipes the database and its saved snapshot, returning you to the welcome screen. This can't be undone — you'll need to re-import your Spotify export.",
+	"settings.confirmClearTitle": "Clear your library?",
+	"settings.confirmClearBody":
+		"This permanently deletes all imported listening data from this browser. You can re-import your Spotify export afterwards.",
+
+	// --- Import ------------------------------------------------------------
+	"import.getData": "Get your Spotify data",
+	"import.step1Title": "Find your account",
+	"import.step1Text":
+		"Go to spotify.com, log in, then open the Account menu in the top-right.",
+	"import.step2Title": "Open Account privacy",
+	"import.step2Text":
+		"In the account settings sidebar, scroll to the Account privacy section.",
+	"import.step3Title": "Request your data",
+	"import.step3Text":
+		"Under “Download your data”, locate Extended streaming history and tick it, untick Account data, then hit Request data.",
+	"import.step4Title": "Wait for the email",
+	"import.step4Text":
+		"Spotify emails a confirmation link — click it to start the export. After a while (often a few days) they send a download link. Grab the my_spotify_data.zip and drop it here — no need to unzip.",
+	"import.stepAlt": "Step {n}: {title}",
+	"import.backToUpload": "Back to upload",
+	"import.welcomeTitle": "Welcome to Wrapped",
+	"import.welcomeLede":
+		"No listening history yet. Drop your {file} below to get started",
+	"import.reimportLede":
+		"Import a Spotify export to replace everything currently loaded. This overwrites your existing data.",
+	"import.reading": "Reading export… {pct}%",
+	"import.importing": "Importing history… this can take a moment.",
+	"import.complete": "Import complete — your data has been replaced.",
+	"import.dropAnother": "Drop another archive to import again.",
+	"import.dropHere": "Drop my_spotify_data.zip here, or click to choose",
+	"import.onlyZip": "Only the .zip — no need to unzip it first.",
+	"import.learnHow": "Learn how to load your data from Spotify",
+	"import.reimportWarn": "Re-importing replaces all currently loaded data.",
+	"import.errZip": "Please drop a .zip archive.",
+	"import.errFailed": "Import failed.",
+
+	// --- Track / Artist detail --------------------------------------------
+	"detail.skipRate": "skip rate",
+	"detail.rank": "rank",
+	"detail.byPlaysLifetime": "by plays, lifetime",
+	"detail.firstHeard": "first heard",
+	"detail.length": "length",
+	"detail.longestPlay": "longest play",
+	"track.playsPerMonth": "Plays per month",
+	"track.whenYouPlay": "When you play it (hour of day)",
+	"track.completion": "Completion",
+	"track.howItStarts": "How it starts",
+	"track.platforms": "Platforms",
+	"artist.top3": "top 3 tracks = {pct} of plays — {verdict}",
+	"artist.liveOnHits": "you live on the hits",
+	"artist.wholeCatalogue": "you work the whole catalogue",
+	"artist.hoursPerMonth": "Hours per month",
+	"artist.topAlbums": "Top albums by hours",
+	"artist.allTracks": "All tracks",
+	"artist.allTracksCount": "All tracks ({count})",
+
+	// --- Year in review ----------------------------------------------------
+	"year.inReview": "{year} in review",
+	"year.streamsSub": "{count} ≥30s",
+	"year.topTracks": "Top tracks",
+	"year.topArtists": "Top artists",
+	"year.busiestDay": "busiest day",
+	"year.busiestSub": "{hours} h · {plays} plays",
+	"year.longestStreak": "longest streak",
+	"year.streakSub": "{from} → {to}",
+	"year.biggestDiscovery": "biggest discovery",
+	"year.discoverySub": "{hours} h, first heard this year",
+	"year.skipChampion": "skip champion",
+	"year.skipChampionSub": "{pct} skipped over {plays} plays",
+
+	// --- links -------------------------------------------------------------
+	"links.openInSpotify": "Open in Spotify",
+	"links.spotifyPlayer": "Spotify player",
+	"links.back": "Back",
+	"links.backLabel": "Go back to the previous page",
+	"links.unknownArtist": "unknown artist",
+
+	// --- command palette ---------------------------------------------------
+	"palette.placeholder": "Search tracks and artists…",
+	"palette.artist": "artist",
+	"palette.track": "track",
+	"palette.noMatches": "No matches",
+
+	// --- Story -------------------------------------------------------------
+	"story.origin.eyebrow": "How it began",
+	"story.origin.line": "It started with {track} on a {weekday}, {date}.",
+	"story.origin.foot": "{artist} · {years} years ago",
+	"story.time.eyebrow": "All told",
+	"story.time.line":
+		"You've pressed play for {days} straight — about {weeks} full work-weeks of music.",
+	"story.time.foot": "{hours} hours since {year}",
+	"story.persona.eyebrow": "Who you are",
+	"story.persona.line": "You're a {loyalty} {clock} who {skip}.",
+	"story.persona.foot":
+		"{night} after dark · {skip} skip rate · {oneshots} artists tried just once",
+	"story.persona.loyal": "fiercely loyal",
+	"story.persona.curious": "endlessly curious",
+	"story.persona.openMinded": "open-minded",
+	"story.persona.nightOwl": "night owl",
+	"story.persona.daytime": "daytime listener",
+	"story.persona.allHours": "all-hours listener",
+	"story.persona.neverSkips": "almost never skips",
+	"story.persona.rarelySkips": "rarely skips",
+	"story.persona.skipsHard": "skips without mercy",
+	"story.obsession.eyebrow": "Your record",
+	"story.obsession.line": "One day you played {track} {times}.",
+	"story.obsession.times": "{count} times",
+	"story.obsession.foot": "{date} · {artist}",
+	"story.faded.eyebrow": "You moved on",
+	"story.faded.line":
+		"You haven't touched {track} since {since}. It was your anthem in {peak}.",
+	"story.faded.foot": "{plays} plays that year · {artist}",
+	"story.closing.eyebrow": "That's the story",
+	"story.closing.line":
+		"The numbers behind every beat are waiting for you in the {summary}.",
+	"story.closing.summary": "Summary",
+	"story.closing.cta": "Go To Summary →",
+
+	// --- completion bands (backend codes) ----------------------------------
+	"completion.finished": "Finished",
+	"completion.most": "Most of it",
+	"completion.partial": "Partway",
+	"completion.bailed": "Bailed early",
+	"completion.unknown": "Unknown",
+
+	// --- reason_start codes ------------------------------------------------
+	"reasonStart.trackdone": "Previous track ended",
+	"reasonStart.fwdbtn": "Skipped forward into it",
+	"reasonStart.backbtn": "Skipped back to it",
+	"reasonStart.clickrow": "Picked from a list",
+	"reasonStart.playbtn": "Pressed play",
+	"reasonStart.appload": "App opened",
+	"reasonStart.remote": "Remote / cast device",
+	"reasonStart.trackerror": "After a track error",
+	"reasonStart.?": "Unknown",
+} as const;
+
+export type Catalog = typeof en;

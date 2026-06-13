@@ -1,7 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { api, type DayCount } from "../api";
-import { fmtHours, fmtInt } from "../format";
+import { fmtHours, fmtInt, monthLabel, weekdayShort } from "../format";
+import { fillNodes, useT } from "../i18n";
 import { navigate } from "../router";
 import { ControlsBar, Field, Panel, Select, Status } from "../ui";
 import * as css from "./Calendar.css";
@@ -15,20 +16,6 @@ const STEP = CELL + GAP;
 const TOP = 18; // room for month labels
 const LEFT = 28; // room for weekday labels
 const LEVELS = ["#242424", "#14502c", "#15883e", "#1db954", "#1ed760"];
-const MONTHS = [
-	"Jan",
-	"Feb",
-	"Mar",
-	"Apr",
-	"May",
-	"Jun",
-	"Jul",
-	"Aug",
-	"Sep",
-	"Oct",
-	"Nov",
-	"Dec",
-];
 
 const WEEK_MS = 7 * 86400000;
 const ymd = (d: Date) => d.toISOString().slice(0, 10);
@@ -45,6 +32,7 @@ function level(hours: number, max: number): number {
 }
 
 export default function Calendar() {
+	const t = useT();
 	const { data: summary } = useQuery({
 		queryKey: ["summary"],
 		queryFn: api.summary,
@@ -64,7 +52,7 @@ export default function Calendar() {
 	return (
 		<>
 			<ControlsBar>
-				<Field label="year">
+				<Field label={t("controls.year")}>
 					<Select
 						value={data.year}
 						onChange={(e) => setYear(Number(e.target.value))}
@@ -83,6 +71,7 @@ export default function Calendar() {
 }
 
 function Heatmap({ year, days }: { year: number; days: DayCount[] }) {
+	const t = useT();
 	const byDate = useMemo(() => new Map(days.map((d) => [d.date, d])), [days]);
 	const maxHours = useMemo(
 		() => days.reduce((m, d) => Math.max(m, d.hours), 0),
@@ -116,9 +105,12 @@ function Heatmap({ year, days }: { year: number; days: DayCount[] }) {
 			});
 		}
 		const cols = Math.floor((+dec31 - +start) / WEEK_MS) + 1;
-		const monthLabels = MONTHS.map((label, m) => {
+		const monthLabels = Array.from({ length: 12 }, (_, m) => {
 			const first = Date.UTC(year, m, 1);
-			return { label, col: Math.floor((first - +start) / WEEK_MS) };
+			return {
+				label: monthLabel(m),
+				col: Math.floor((first - +start) / WEEK_MS),
+			};
 		});
 		return { cells, cols, monthLabels };
 	}, [year, byDate]);
@@ -130,20 +122,22 @@ function Heatmap({ year, days }: { year: number; days: DayCount[] }) {
 		<Panel>
 			<div className={css.summary}>
 				<span>
-					<strong>{fmtHours(totalHours)}</strong> hours over{" "}
-					<strong>{fmtInt(days.length)}</strong> active days in {year}
+					{fillNodes(t("calendar.summary", { year }), {
+						hours: <strong>{fmtHours(totalHours)}</strong>,
+						days: <strong>{fmtInt(days.length)}</strong>,
+					})}
 				</span>
 				<span className={css.legend}>
-					less
+					{t("calendar.less")}
 					{LEVELS.map((c) => (
 						<span key={c} className={css.swatch} style={{ background: c }} />
 					))}
-					more
+					{t("calendar.more")}
 				</span>
 			</div>
 			<div className={css.scroll}>
 				<svg width={width} height={height} className={css.svg}>
-					<title>Listening activity by day</title>
+					<title>{t("calendar.activityTitle")}</title>
 					{monthLabels.map((m) => (
 						<text
 							key={m.label}
@@ -154,14 +148,14 @@ function Heatmap({ year, days }: { year: number; days: DayCount[] }) {
 							{m.label}
 						</text>
 					))}
-					{["Mon", "Wed", "Fri"].map((d, i) => (
+					{[1, 3, 5].map((wd) => (
 						<text
-							key={d}
+							key={wd}
 							x={0}
-							y={TOP + (i * 2 + 1) * STEP - 2}
+							y={TOP + wd * STEP - 2}
 							className={css.monthLabel}
 						>
-							{d}
+							{weekdayShort(wd)}
 						</text>
 					))}
 					{cells.map((c) => {
@@ -187,8 +181,11 @@ function Heatmap({ year, days }: { year: number; days: DayCount[] }) {
 								<title>
 									{c.date}:{" "}
 									{plays
-										? `${fmtInt(plays)} plays · ${fmtHours(hours)} h`
-										: "no plays"}
+										? t("calendar.dayPlays", {
+												plays: fmtInt(plays),
+												hours: fmtHours(hours),
+											})
+										: t("calendar.noPlays")}
 								</title>
 							</rect>
 						);

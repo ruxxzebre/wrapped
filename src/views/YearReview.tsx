@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { api, type YearArtistDelta, type YearTrackDelta } from "../api";
 import { fmtDate, fmtHours, fmtInt, fmtPct } from "../format";
+import { type TFunction, useT } from "../i18n";
 import { ArtistLink, BackLink, TrackLink } from "../links";
 import * as linkCss from "../links.css";
 import { Link, yearPath } from "../router";
@@ -20,17 +21,23 @@ import {
 import * as headCss from "../ui/DetailHead.css";
 import { Cards } from "../widgets";
 
-const TRACK_COLUMNS: Column<YearTrackDelta>[] = [
-	{ key: "rank", header: "#", width: "2rem", muted: true, cell: (t) => t.rank },
+const trackColumns = (t: TFunction): Column<YearTrackDelta>[] => [
+	{
+		key: "rank",
+		header: t("col.rank"),
+		width: "2rem",
+		muted: true,
+		cell: (row) => row.rank,
+	},
 	{
 		key: "track",
-		header: "track",
-		cell: (t) => (
+		header: t("col.track"),
+		cell: (row) => (
 			<>
-				<TrackLink uri={t.track_uri} name={t.name} />
+				<TrackLink uri={row.track_uri} name={row.name} />
 				<div>
 					<Muted size="md">
-						<ArtistLink name={t.artist} muted />
+						<ArtistLink name={row.artist} muted />
 					</Muted>
 				</div>
 			</>
@@ -38,40 +45,47 @@ const TRACK_COLUMNS: Column<YearTrackDelta>[] = [
 	},
 	{
 		key: "plays",
-		header: "plays",
+		header: t("col.plays"),
 		align: "right",
-		cell: (t) => fmtInt(t.plays),
+		cell: (row) => fmtInt(row.plays),
 	},
 	{
 		key: "delta",
-		header: "move",
+		header: t("col.move"),
 		align: "right",
-		cell: (t) => <Delta rank={t.rank} prevRank={t.prev_rank} />,
+		cell: (row) => <Delta rank={row.rank} prevRank={row.prev_rank} />,
 	},
 ];
 
-const ARTIST_COLUMNS: Column<YearArtistDelta>[] = [
-	{ key: "rank", header: "#", width: "2rem", muted: true, cell: (a) => a.rank },
+const artistColumns = (t: TFunction): Column<YearArtistDelta>[] => [
+	{
+		key: "rank",
+		header: t("col.rank"),
+		width: "2rem",
+		muted: true,
+		cell: (a) => a.rank,
+	},
 	{
 		key: "artist",
-		header: "artist",
+		header: t("col.artist"),
 		cell: (a) => <ArtistLink name={a.artist} />,
 	},
 	{
 		key: "plays",
-		header: "plays",
+		header: t("col.plays"),
 		align: "right",
 		cell: (a) => fmtInt(a.plays),
 	},
 	{
 		key: "delta",
-		header: "move",
+		header: t("col.move"),
 		align: "right",
 		cell: (a) => <Delta rank={a.rank} prevRank={a.prev_rank} />,
 	},
 ];
 
 export default function YearReview({ year }: { year: number }) {
+	const t = useT();
 	const { data: summary } = useQuery({
 		queryKey: ["summary"],
 		queryFn: api.summary,
@@ -88,17 +102,20 @@ export default function YearReview({ year }: { year: number }) {
 
 	const cards = [
 		{
-			label: "hours",
+			label: t("card.hours"),
 			value: fmtHours(data.hours),
-			sub: `${(data.hours / 24).toFixed(0)} days`,
+			sub: t("count.days", {
+				count: Math.round(data.hours / 24),
+				n: fmtInt(Math.round(data.hours / 24)),
+			}),
 		},
 		{
-			label: "plays",
+			label: t("card.plays"),
 			value: fmtInt(data.plays),
-			sub: `${fmtInt(data.streams)} ≥30s`,
+			sub: t("year.streamsSub", { count: fmtInt(data.streams) }),
 		},
-		{ label: "tracks", value: fmtInt(data.tracks) },
-		{ label: "artists", value: fmtInt(data.artists) },
+		{ label: t("card.tracks"), value: fmtInt(data.tracks) },
+		{ label: t("card.artists"), value: fmtInt(data.artists) },
 	];
 
 	return (
@@ -113,7 +130,7 @@ export default function YearReview({ year }: { year: number }) {
 					style={{ justifyContent: "space-between" }}
 				>
 					{prev ? <YearLink year={prev} dir="prev" /> : <span />}
-					<DetailTitle>{year} in review</DetailTitle>
+					<DetailTitle>{t("year.inReview", { year })}</DetailTitle>
 					{next ? <YearLink year={next} dir="next" /> : <span />}
 				</Row>
 			</div>
@@ -121,19 +138,19 @@ export default function YearReview({ year }: { year: number }) {
 			<Cards items={cards} />
 
 			<Grid2>
-				<Panel title="Top tracks">
+				<Panel title={t("year.topTracks")}>
 					<DataTable
 						rows={data.top_tracks}
-						columns={TRACK_COLUMNS}
-						rowKey={(t) => t.track_uri}
+						columns={trackColumns(t)}
+						rowKey={(row) => row.track_uri}
 						showHeader={false}
 					/>
 				</Panel>
 
-				<Panel title="Top artists">
+				<Panel title={t("year.topArtists")}>
 					<DataTable
 						rows={data.top_artists}
-						columns={ARTIST_COLUMNS}
+						columns={artistColumns(t)}
 						rowKey={(a) => a.artist}
 						showHeader={false}
 					/>
@@ -144,33 +161,47 @@ export default function YearReview({ year }: { year: number }) {
 				{data.busiest_day && (
 					<Card
 						valueSize="md"
-						label="busiest day"
+						label={t("year.busiestDay")}
 						value={fmtDate(data.busiest_day.date)}
-						sub={`${fmtHours(data.busiest_day.hours)} h · ${fmtInt(data.busiest_day.plays)} plays`}
+						sub={t("year.busiestSub", {
+							hours: fmtHours(data.busiest_day.hours),
+							plays: fmtInt(data.busiest_day.plays),
+						})}
 					/>
 				)}
 				{data.streak && (
 					<Card
 						valueSize="md"
-						label="longest streak"
-						value={`${data.streak.days} days`}
-						sub={`${fmtDate(data.streak.from)} → ${fmtDate(data.streak.to)}`}
+						label={t("year.longestStreak")}
+						value={t("count.days", {
+							count: data.streak.days,
+							n: fmtInt(data.streak.days),
+						})}
+						sub={t("year.streakSub", {
+							from: fmtDate(data.streak.from),
+							to: fmtDate(data.streak.to),
+						})}
 					/>
 				)}
 				{data.discovery && (
 					<Card
 						valueSize="md"
-						label="biggest discovery"
+						label={t("year.biggestDiscovery")}
 						value={data.discovery.artist}
-						sub={`${fmtHours(data.discovery.hours)} h, first heard this year`}
+						sub={t("year.discoverySub", {
+							hours: fmtHours(data.discovery.hours),
+						})}
 					/>
 				)}
 				{data.skip_champion && (
 					<Card
 						valueSize="md"
-						label="skip champion"
+						label={t("year.skipChampion")}
 						value={data.skip_champion.name}
-						sub={`${fmtPct(data.skip_champion.skip_ratio)} skipped over ${fmtInt(data.skip_champion.plays)} plays`}
+						sub={t("year.skipChampionSub", {
+							pct: fmtPct(data.skip_champion.skip_ratio),
+							plays: fmtInt(data.skip_champion.plays),
+						})}
 					/>
 				)}
 			</CardGrid>

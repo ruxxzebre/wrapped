@@ -3,6 +3,7 @@ import { useMemo, useState } from "react";
 import { api, type Metric, type Window } from "../api";
 import { MetricToggle, WindowPicker } from "../controls";
 import { fmtInt } from "../format";
+import { useT } from "../i18n";
 import { ArtistLink, TrackLink } from "../links";
 import {
 	type Column,
@@ -33,6 +34,7 @@ type Joined = {
 };
 
 export default function Compare() {
+	const t = useT();
 	const { data: summary } = useQuery({
 		queryKey: ["summary"],
 		queryFn: api.summary,
@@ -64,12 +66,12 @@ export default function Compare() {
 		[qA.data, qB.data, metric],
 	);
 
-	const unit = metric === "plays" ? "plays" : "hrs";
+	const unit = metric === "plays" ? t("unit.plays") : t("unit.hrs");
 	const columns = useMemo<Column<Joined>[]>(
 		() => [
 			{
 				key: "name",
-				header: entity === "artists" ? "artist" : "track",
+				header: entity === "artists" ? t("col.artist") : t("col.track"),
 				cell: (r) => (
 					<>
 						{r.uri ? (
@@ -83,48 +85,48 @@ export default function Compare() {
 			},
 			{
 				key: "rankA",
-				header: "A rank",
+				header: t("col.aRank"),
 				align: "right",
 				muted: true,
-				cell: (r) => r.rankA ?? "—",
+				cell: (r) => r.rankA ?? t("common.dash"),
 			},
 			{
 				key: "rankB",
-				header: "B rank",
+				header: t("col.bRank"),
 				align: "right",
 				muted: true,
-				cell: (r) => r.rankB ?? "—",
+				cell: (r) => r.rankB ?? t("common.dash"),
 			},
 			{
 				key: "move",
-				header: "move",
+				header: t("col.move"),
 				align: "right",
 				cell: (r) => <Delta rank={r.rankB} prevRank={r.rankA} />,
 			},
 			{
 				key: "valueA",
-				header: `A ${unit}`,
+				header: t("col.aValue", { unit }),
 				align: "right",
 				cell: (r) => fmtInt(Math.round(r.valueA)),
 			},
 			{
 				key: "valueB",
-				header: `B ${unit}`,
+				header: t("col.bValue", { unit }),
 				align: "right",
 				cell: (r) => fmtInt(Math.round(r.valueB)),
 			},
 		],
-		[entity, unit],
+		[entity, unit, t],
 	);
 
 	return (
 		<>
 			<ControlsBar>
-				<Field label="compare">
+				<Field label={t("compare.compare")}>
 					<ToggleGroup
 						options={[
-							{ value: "artists", label: "artists" },
-							{ value: "tracks", label: "tracks" },
+							{ value: "artists", label: t("compare.artists") },
+							{ value: "tracks", label: t("compare.tracks") },
 						]}
 						value={entity}
 						onChange={setEntity}

@@ -10,6 +10,7 @@ import {
 } from "react";
 import { api, type StoryPersona } from "../api";
 import { fmtHours, fmtInt } from "../format";
+import { fillNodes, type TFunction, useT } from "../i18n";
 import { artistPath, Link, trackPath } from "../router";
 import { palette } from "../ui";
 import * as css from "./Story.css";
@@ -22,6 +23,7 @@ import * as css from "./Story.css";
 const storyApi = getRouteApi("/story");
 
 export default function Story() {
+	const t = useT();
 	const { data: story } = useQuery({ queryKey: ["story"], queryFn: api.story });
 	// Shares the summary cache with the cards below, so this is usually a hit.
 	const { data: summary } = useQuery({
@@ -51,127 +53,137 @@ export default function Story() {
 		<div className={css.stack} ref={stackRef}>
 			{story.origin && (
 				<Scene
-					eyebrow="How it began"
+					eyebrow={t("story.origin.eyebrow")}
 					glow="rgba(29,185,84,0.16)"
 					motif={<Rings />}
-					line={
-						<>
-							It started with{" "}
+					line={fillNodes(t("story.origin.line", { date: story.origin.date }), {
+						track: (
 							<Link
 								to={trackPath(story.origin.track_uri)}
 								className={css.heroLink}
 							>
 								{story.origin.name}
-							</Link>{" "}
-							on a <span className={css.hero}>{story.origin.weekday}</span>,{" "}
-							{story.origin.date}.
-						</>
-					}
-					foot={
-						<>
-							<ArtistFoot name={story.origin.artist} /> ·{" "}
-							{now - Number(story.origin.date.slice(0, 4))} years ago
-						</>
-					}
+							</Link>
+						),
+						weekday: <span className={css.hero}>{story.origin.weekday}</span>,
+					})}
+					foot={fillNodes(
+						t("story.origin.foot", {
+							years: now - Number(story.origin.date.slice(0, 4)),
+						}),
+						{ artist: <ArtistFoot name={story.origin.artist} /> },
+					)}
 				/>
 			)}
 
 			{summary && summary.hours > 0 && (
 				<Scene
-					eyebrow="All told"
+					eyebrow={t("story.time.eyebrow")}
 					glow="rgba(80,140,255,0.16)"
 					motif={<Marks />}
-					line={
-						<>
-							You've pressed play for{" "}
-							<span className={css.hero}>
-								{fmtInt(Math.round(summary.hours / 24))} days
-							</span>{" "}
-							straight — about {fmtInt(Math.round(summary.hours / 40))} full
-							work-weeks of music.
-						</>
-					}
-					foot={`${fmtHours(summary.hours)} hours since ${summary.first_play.slice(0, 4)}`}
+					line={fillNodes(
+						t("story.time.line", {
+							weeks: fmtInt(Math.round(summary.hours / 40)),
+						}),
+						{
+							days: (
+								<span className={css.hero}>
+									{t("count.days", {
+										count: Math.round(summary.hours / 24),
+										n: fmtInt(Math.round(summary.hours / 24)),
+									})}
+								</span>
+							),
+						},
+					)}
+					foot={t("story.time.foot", {
+						hours: fmtHours(summary.hours),
+						year: summary.first_play.slice(0, 4),
+					})}
 				/>
 			)}
 
 			{story.persona && (
 				<Scene
-					eyebrow="Who you are"
+					eyebrow={t("story.persona.eyebrow")}
 					glow="rgba(180,120,255,0.16)"
 					motif={<Sigil p={story.persona} />}
-					line={<PersonaLine p={story.persona} />}
-					foot={personaFootnote(story.persona)}
+					line={<PersonaLine p={story.persona} t={t} />}
+					foot={personaFootnote(story.persona, t)}
 				/>
 			)}
 
 			{story.obsession && (
 				<Scene
-					eyebrow="Your record"
+					eyebrow={t("story.obsession.eyebrow")}
 					glow="rgba(255,164,43,0.16)"
 					motif={<Spiral n={story.obsession.plays} />}
-					line={
-						<>
-							One day you played{" "}
+					line={fillNodes(t("story.obsession.line"), {
+						track: (
 							<Link
 								to={trackPath(story.obsession.track_uri)}
 								className={css.heroLink}
 							>
 								{story.obsession.name}
-							</Link>{" "}
-							<span className={css.hero}>{story.obsession.plays} times</span>.
-						</>
-					}
-					foot={
-						<>
-							{story.obsession.date} ·{" "}
-							<ArtistFoot name={story.obsession.artist} />
-						</>
-					}
+							</Link>
+						),
+						times: (
+							<span className={css.hero}>
+								{t("story.obsession.times", {
+									count: story.obsession.plays,
+									n: fmtInt(story.obsession.plays),
+								})}
+							</span>
+						),
+					})}
+					foot={fillNodes(
+						t("story.obsession.foot", { date: story.obsession.date }),
+						{ artist: <ArtistFoot name={story.obsession.artist} /> },
+					)}
 				/>
 			)}
 
 			{story.faded && (
 				<Scene
-					eyebrow="You moved on"
+					eyebrow={t("story.faded.eyebrow")}
 					glow="rgba(241,94,108,0.14)"
 					motif={<Dissolve />}
-					line={
-						<>
-							You haven't touched{" "}
-							<Link
-								to={trackPath(story.faded.track_uri)}
-								className={css.heroLink}
-							>
-								{story.faded.name}
-							</Link>{" "}
-							since {story.faded.last_play.slice(0, 4)}. It was your anthem in{" "}
-							<span className={css.hero}>{story.faded.peak_year}</span>.
-						</>
-					}
-					foot={
-						<>
-							{fmtInt(story.faded.plays)} plays that year ·{" "}
-							<ArtistFoot name={story.faded.artist} />
-						</>
-					}
+					line={fillNodes(
+						t("story.faded.line", {
+							since: story.faded.last_play.slice(0, 4),
+						}),
+						{
+							track: (
+								<Link
+									to={trackPath(story.faded.track_uri)}
+									className={css.heroLink}
+								>
+									{story.faded.name}
+								</Link>
+							),
+							peak: <span className={css.hero}>{story.faded.peak_year}</span>,
+						},
+					)}
+					foot={fillNodes(
+						t("story.faded.foot", { plays: fmtInt(story.faded.plays) }),
+						{ artist: <ArtistFoot name={story.faded.artist} /> },
+					)}
 				/>
 			)}
 
 			<Scene
-				eyebrow="That's the story"
+				eyebrow={t("story.closing.eyebrow")}
 				glow="rgba(29,185,84,0.16)"
 				motif={<Rings />}
-				line={
-					<>
-						The numbers behind every beat are waiting for you in the{" "}
-						<span className={css.hero}>Summary</span>.
-					</>
-				}
+				line={fillNodes(t("story.closing.line"), {
+					summary: (
+						<span className={css.hero}>{t("story.closing.summary")}</span>
+					),
+				})}
 				foot={null}
 				action={
 					<Link to="/" className={css.cta}>
-						Go To Summary →
+						{t("story.closing.cta")}
 					</Link>
 				}
 			/>
@@ -350,7 +362,8 @@ function Scene({
 }
 
 function ArtistFoot({ name }: { name: string }) {
-	if (!name || name === "?") return <span>unknown artist</span>;
+	const t = useT();
+	if (!name || name === "?") return <span>{t("links.unknownArtist")}</span>;
 	return (
 		<Link to={artistPath(name)} className={css.heroLink}>
 			{name}
@@ -360,41 +373,46 @@ function ArtistFoot({ name }: { name: string }) {
 
 // --- persona copy -----------------------------------------------------------
 
+// Maps the persona stats to translation keys for each trait; the caller fills
+// them into the sentence so word order follows the language.
 function describe(p: StoryPersona) {
 	const curiosity = p.oneshot_artists / Math.max(1, p.total_artists);
 	const loyalty =
 		p.loyal_artists >= 20
-			? "fiercely loyal"
+			? "story.persona.loyal"
 			: curiosity > 0.6
-				? "endlessly curious"
-				: "open-minded";
+				? "story.persona.curious"
+				: "story.persona.openMinded";
 	const clock =
 		p.night_ratio >= 0.35
-			? "night owl"
+			? "story.persona.nightOwl"
 			: p.night_ratio <= 0.12
-				? "daytime listener"
-				: "all-hours listener";
+				? "story.persona.daytime"
+				: "story.persona.allHours";
 	const skip =
 		p.skip_ratio < 0.08
-			? "almost never skips"
+			? "story.persona.neverSkips"
 			: p.skip_ratio < 0.2
-				? "rarely skips"
-				: "skips without mercy";
-	return { loyalty, clock, skip };
+				? "story.persona.rarelySkips"
+				: "story.persona.skipsHard";
+	return { loyalty, clock, skip } as const;
 }
 
-function PersonaLine({ p }: { p: StoryPersona }) {
+function PersonaLine({ p, t }: { p: StoryPersona; t: TFunction }) {
 	const { loyalty, clock, skip } = describe(p);
-	return (
-		<>
-			You're a {loyalty} <span className={css.hero}>{clock}</span> who {skip}.
-		</>
+	return fillNodes(
+		t("story.persona.line", { loyalty: t(loyalty), skip: t(skip) }),
+		{ clock: <span className={css.hero}>{t(clock)}</span> },
 	);
 }
 
-function personaFootnote(p: StoryPersona) {
+function personaFootnote(p: StoryPersona, t: TFunction) {
 	const pct = (r: number) => `${Math.round(r * 100)}%`;
-	return `${pct(p.night_ratio)} after dark · ${pct(p.skip_ratio)} skip rate · ${fmtInt(p.oneshot_artists)} artists tried just once`;
+	return t("story.persona.foot", {
+		night: pct(p.night_ratio),
+		skip: pct(p.skip_ratio),
+		oneshots: fmtInt(p.oneshot_artists),
+	});
 }
 
 // --- motifs (shape encodes meaning) -----------------------------------------

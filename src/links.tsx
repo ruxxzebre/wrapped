@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { useT } from "./i18n";
 import * as css from "./links.css";
 import { artistPath, Link, trackPath } from "./router";
 import { useSetting } from "./settings";
@@ -22,7 +23,8 @@ export function TrackLink({ uri, name }: { uri: string; name: string }) {
 }
 
 export function ArtistLink({ name, muted }: { name: string; muted?: boolean }) {
-	if (!name || name === "?") return <Muted>{name || "—"}</Muted>;
+	const t = useT();
+	if (!name || name === "?") return <Muted>{name || t("common.dash")}</Muted>;
 	return (
 		<Link
 			to={artistPath(name)}
@@ -39,6 +41,7 @@ export function ArtistLink({ name, muted }: { name: string; muted?: boolean }) {
 // anchor so it still resolves in a browser when the app isn't present (the
 // web player itself offers to hand off to the app).
 export function SpotifyLink({ uri }: { uri: string }) {
+	const t = useT();
 	const id = trackId(uri);
 	if (!id) return null;
 	return (
@@ -48,7 +51,7 @@ export function SpotifyLink({ uri }: { uri: string }) {
 			target="_blank"
 			rel="noreferrer"
 		>
-			▶ Open in Spotify
+			▶ {t("links.openInSpotify")}
 		</a>
 	);
 }
@@ -59,6 +62,7 @@ export function SpotifyLink({ uri }: { uri: string }) {
 // we render nothing rather than a broken iframe cluttering the page. The probe
 // runs through the query cache so revisiting a track doesn't refetch it.
 export function SpotifyEmbed({ uri }: { uri: string }) {
+	const t = useT();
 	const enabled = useSetting("showPlayer");
 	const id = trackId(uri);
 	const { data: ok } = useQuery({
@@ -87,7 +91,7 @@ export function SpotifyEmbed({ uri }: { uri: string }) {
 
 	return (
 		<iframe
-			title="Spotify player"
+			title={t("links.spotifyPlayer")}
 			data-testid="embed-iframe"
 			className={css.spotifyEmbed}
 			src={`https://open.spotify.com/embed/track/${id}`}
@@ -102,17 +106,18 @@ export function SpotifyEmbed({ uri }: { uri: string }) {
 }
 
 export function BackLink() {
+	const t = useT();
 	return (
 		<button
 			type="button"
 			className={css.backButton}
 			onClick={() => history.back()}
-			aria-label="Go back to the previous page"
+			aria-label={t("links.backLabel")}
 		>
 			<span className={css.backIcon} aria-hidden="true">
 				←
 			</span>
-			Back
+			{t("links.back")}
 		</button>
 	);
 }

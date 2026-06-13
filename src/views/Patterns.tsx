@@ -11,11 +11,12 @@ import {
 } from "recharts";
 import { api, type Bucket, type Window } from "../api";
 import { WindowPicker } from "../controls";
+import { weekdayShort } from "../format";
+import { useT } from "../i18n";
 import { ControlsBar, chartColors, Panel, Status } from "../ui";
 
-const WEEKDAYS = ["", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-
 export default function Patterns() {
+	const t = useT();
 	const [window, setWindow] = useState<Window>({});
 
 	const hourly = useQuery({
@@ -36,16 +37,16 @@ export default function Patterns() {
 			</ControlsBar>
 
 			<PatternChart
-				title="Listening by hour of day (local start time)"
+				title={t("patterns.byHour")}
 				data={hourly.data}
 				error={hourly.error}
 				tick={(b) => String(b)}
 			/>
 			<PatternChart
-				title="Listening by day of week"
+				title={t("patterns.byWeekday")}
 				data={weekly.data}
 				error={weekly.error}
-				tick={(b) => WEEKDAYS[b]}
+				tick={(b) => weekdayShort(b)}
 			/>
 		</>
 	);

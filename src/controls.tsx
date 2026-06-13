@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { api, type Metric, type Window } from "./api";
+import { useT } from "./i18n";
 import { Field, Input, Select, ToggleGroup } from "./ui";
 
 export function MetricToggle({
@@ -10,12 +11,13 @@ export function MetricToggle({
 	value: Metric;
 	onChange: (m: Metric) => void;
 }) {
+	const t = useT();
 	return (
-		<Field label="rank by">
+		<Field label={t("controls.rankBy")}>
 			<ToggleGroup
 				options={[
-					{ value: "plays", label: "plays" },
-					{ value: "ms", label: "time" },
+					{ value: "plays", label: t("metric.plays") },
+					{ value: "ms", label: t("metric.time") },
 				]}
 				value={value}
 				onChange={onChange}
@@ -41,6 +43,7 @@ export function WindowPicker({
 	value: Window;
 	onChange: (w: Window) => void;
 }) {
+	const t = useT();
 	const { data: summary } = useQuery({
 		queryKey: ["summary"],
 		queryFn: api.summary,
@@ -59,7 +62,7 @@ export function WindowPicker({
 
 	return (
 		<>
-			<Field label="period">
+			<Field label={t("controls.period")}>
 				<Select
 					value={preset}
 					onChange={(e) => {
@@ -68,18 +71,18 @@ export function WindowPicker({
 						else if (v !== "custom") onChange(windowForYear(Number(v)));
 					}}
 				>
-					<option value="all">all time</option>
+					<option value="all">{t("period.all")}</option>
 					{years.map((y) => (
 						<option key={y} value={y}>
 							{y}
 						</option>
 					))}
 					<option value="custom" disabled={preset !== "custom"}>
-						custom
+						{t("period.custom")}
 					</option>
 				</Select>
 			</Field>
-			<Field label="from">
+			<Field label={t("controls.from")}>
 				<Input
 					type="date"
 					value={value.from ?? earliest}
@@ -88,7 +91,7 @@ export function WindowPicker({
 					}
 				/>
 			</Field>
-			<Field label="to">
+			<Field label={t("controls.to")}>
 				<Input
 					type="date"
 					value={value.to ?? today}

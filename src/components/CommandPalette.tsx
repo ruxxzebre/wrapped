@@ -7,6 +7,7 @@ import {
 } from "react";
 import { api } from "../api";
 import { fmtInt } from "../format";
+import { useT } from "../i18n";
 import { artistPath, navigate, trackPath } from "../router";
 import { Modal } from "../ui";
 import * as css from "./CommandPalette.css";
@@ -18,6 +19,7 @@ type Result =
 // Ctrl+K palette. Reuses the Library track dump already in the query cache —
 // no backend call — and derives the artist list from it.
 export default function CommandPalette({ onClose }: { onClose: () => void }) {
+	const t = useT();
 	const { data } = useQuery({
 		queryKey: ["allTracks"],
 		queryFn: api.allTracks,
@@ -46,25 +48,25 @@ export default function CommandPalette({ onClose }: { onClose: () => void }) {
 			.map<Result>((a) => ({
 				type: "artist",
 				label: a.name,
-				sub: `${fmtInt(a.plays)} plays`,
+				sub: t("count.plays", { count: a.plays, n: fmtInt(a.plays) }),
 				to: artistPath(a.name),
 			}));
 		const trackHits = data.items
 			.filter(
-				(t) =>
-					t.name.toLowerCase().includes(needle) ||
-					t.artist.toLowerCase().includes(needle),
+				(tr) =>
+					tr.name.toLowerCase().includes(needle) ||
+					tr.artist.toLowerCase().includes(needle),
 			)
 			.sort((x, y) => y.plays - x.plays)
 			.slice(0, 12)
-			.map<Result>((t) => ({
+			.map<Result>((tr) => ({
 				type: "track",
-				label: t.name,
-				sub: `${t.artist} · ${fmtInt(t.plays)} plays`,
-				to: trackPath(t.track_uri),
+				label: tr.name,
+				sub: `${tr.artist} · ${t("count.plays", { count: tr.plays, n: fmtInt(tr.plays) })}`,
+				to: trackPath(tr.track_uri),
 			}));
 		return [...artistHits, ...trackHits];
-	}, [query, data, artists]);
+	}, [query, data, artists, t]);
 
 	const go = (r?: Result) => {
 		if (!r) return;
@@ -94,7 +96,7 @@ export default function CommandPalette({ onClose }: { onClose: () => void }) {
 				// focused element is a no-op.
 				ref={(el) => el?.focus()}
 				className={css.input}
-				placeholder="Search tracks and artists…"
+				placeholder={t("palette.placeholder")}
 				value={q}
 				onChange={(e) => {
 					setQ(e.target.value);
@@ -115,7 +117,7 @@ export default function CommandPalette({ onClose }: { onClose: () => void }) {
 							onClick={() => go(r)}
 						>
 							<span className={css.kind}>
-								{r.type === "artist" ? "artist" : "track"}
+								{r.type === "artist" ? t("palette.artist") : t("palette.track")}
 							</span>
 							<span className={css.label}>{r.label}</span>
 							<span className={css.sub}>{r.sub}</span>
@@ -124,7 +126,7 @@ export default function CommandPalette({ onClose }: { onClose: () => void }) {
 				</ul>
 			)}
 			{query.trim() && results.length === 0 && (
-				<div className={css.empty}>No matches</div>
+				<div className={css.empty}>{t("palette.noMatches")}</div>
 			)}
 		</Modal>
 	);

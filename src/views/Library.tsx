@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { api, type TrackRow } from "../api";
 import { fmtDate, fmtHours, fmtInt, fmtPct } from "../format";
+import { type TFunction, useT } from "../i18n";
 import { ArtistLink, TrackLink } from "../links";
 import {
 	ControlsBar,
@@ -14,61 +15,61 @@ import {
 	VirtualTable,
 } from "../ui";
 
-const COLUMNS: VColumn<TrackRow>[] = [
+const columns = (t: TFunction): VColumn<TrackRow>[] => [
 	{
 		key: "name",
-		header: "track",
+		header: t("col.track"),
 		size: "minmax(200px,2fr)",
 		sortable: true,
-		cell: (t) => <TrackLink uri={t.track_uri} name={t.name} />,
+		cell: (row) => <TrackLink uri={row.track_uri} name={row.name} />,
 	},
 	{
 		key: "artist",
-		header: "artist",
+		header: t("col.artist"),
 		size: "minmax(140px,1.4fr)",
 		sortable: true,
-		cell: (t) => <ArtistLink name={t.artist} muted />,
+		cell: (row) => <ArtistLink name={row.artist} muted />,
 	},
 	{
 		key: "album",
-		header: "album",
+		header: t("col.album"),
 		size: "minmax(140px,1.4fr)",
 		muted: true,
-		cell: (t) => t.album,
+		cell: (row) => row.album,
 	},
 	{
 		key: "plays",
-		header: "plays",
+		header: t("col.plays"),
 		size: "70px",
 		align: "right",
 		sortable: true,
-		cell: (t) => fmtInt(t.plays),
+		cell: (row) => fmtInt(row.plays),
 	},
 	{
 		key: "hours",
-		header: "hours",
+		header: t("col.hours"),
 		size: "70px",
 		align: "right",
 		sortable: true,
-		cell: (t) => fmtHours(t.hours),
+		cell: (row) => fmtHours(row.hours),
 	},
 	{
 		key: "last_play",
-		header: "last",
+		header: t("col.last"),
 		size: "95px",
 		align: "right",
 		muted: true,
 		sortable: true,
-		cell: (t) => fmtDate(t.last_play),
+		cell: (row) => fmtDate(row.last_play),
 	},
 	{
 		key: "skip_ratio",
-		header: "skip",
+		header: t("col.skip"),
 		size: "60px",
 		align: "right",
 		muted: true,
 		sortable: true,
-		cell: (t) => fmtPct(t.skip_ratio),
+		cell: (row) => fmtPct(row.skip_ratio),
 	},
 ];
 
@@ -80,12 +81,14 @@ type SortKey = keyof Pick<
 // The whole distinct-track list (~20k rows) is shipped once and held in
 // memory; search/sort never hit the server. Only the DOM is virtualized.
 export default function Library() {
+	const t = useT();
 	const { data, error } = useQuery({
 		queryKey: ["allTracks"],
 		queryFn: api.allTracks,
 	});
 	const [search, setSearch] = useState("");
 	const [sort, setSort] = useState<Sort>({ key: "plays", desc: true });
+	const COLUMNS = useMemo(() => columns(t), [t]);
 
 	const rows = useMemo(() => {
 		if (!data) return [];
@@ -120,16 +123,19 @@ export default function Library() {
 	return (
 		<>
 			<ControlsBar>
-				<Field label="search">
+				<Field label={t("controls.search")}>
 					<Input
-						placeholder="track / artist / album"
+						placeholder={t("library.searchPlaceholder")}
 						value={search}
 						onChange={(e) => setSearch(e.target.value)}
 						width="16rem"
 					/>
 				</Field>
 				<Muted size="md">
-					{fmtInt(rows.length)} of {fmtInt(data.total)} tracks
+					{t("library.countOf", {
+						shown: fmtInt(rows.length),
+						total: fmtInt(data.total),
+					})}
 				</Muted>
 			</ControlsBar>
 

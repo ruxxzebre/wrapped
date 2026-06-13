@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { api, type PlayRow, type Window } from "../api";
 import { WindowPicker } from "../controls";
 import { fmtDateTime, fmtDuration } from "../format";
+import { type TFunction, useT } from "../i18n";
 import { ArtistLink, TrackLink } from "../links";
 import {
 	ControlsBar,
@@ -14,43 +15,43 @@ import {
 	VirtualTable,
 } from "../ui";
 
-const COLUMNS: VColumn<PlayRow>[] = [
+const columns = (t: TFunction): VColumn<PlayRow>[] => [
 	{
 		key: "ts",
-		header: "played at",
+		header: t("col.playedAt"),
 		size: "140px",
 		muted: true,
 		cell: (p) => fmtDateTime(p.ts),
 	},
 	{
 		key: "track",
-		header: "track",
+		header: t("col.track"),
 		size: "minmax(200px,2fr)",
 		cell: (p) => <TrackLink uri={p.track_uri} name={p.name} />,
 	},
 	{
 		key: "artist",
-		header: "artist",
+		header: t("col.artist"),
 		size: "minmax(140px,1.4fr)",
 		cell: (p) => <ArtistLink name={p.artist} muted />,
 	},
 	{
 		key: "for",
-		header: "for",
+		header: t("col.for"),
 		size: "60px",
 		align: "right",
 		cell: (p) => fmtDuration(p.ms_played),
 	},
 	{
 		key: "skip",
-		header: "skip",
+		header: t("col.skip"),
 		size: "60px",
 		muted: true,
 		cell: (p) => (p.skipped ? "⏭" : ""),
 	},
 	{
 		key: "platform",
-		header: "platform",
+		header: t("col.platform"),
 		size: "minmax(100px,1fr)",
 		muted: true,
 		cell: (p) => shortPlatform(p.platform),
@@ -60,7 +61,9 @@ const COLUMNS: VColumn<PlayRow>[] = [
 // The raw log is 85k+ rows — data transfer is paginated server-side (keyset
 // cursor) and only the fetched window is rendered, virtualized.
 export default function PlayLog() {
+	const t = useT();
 	const { from: qFrom, to: qTo } = useSearch({ from: "/play-log" });
+	const COLUMNS = useMemo(() => columns(t), [t]);
 
 	const [search, setSearch] = useState("");
 	const [debounced, setDebounced] = useState("");
@@ -98,9 +101,9 @@ export default function PlayLog() {
 	return (
 		<>
 			<ControlsBar>
-				<Field label="search">
+				<Field label={t("controls.search")}>
 					<Input
-						placeholder="track / artist"
+						placeholder={t("playLog.searchPlaceholder")}
 						value={search}
 						onChange={(e) => setSearch(e.target.value)}
 						width="16rem"
@@ -120,7 +123,9 @@ export default function PlayLog() {
 						query.fetchNextPage();
 				}}
 				footer={
-					query.isFetchingNextPage ? <Status label="loading more…" /> : null
+					query.isFetchingNextPage ? (
+						<Status label={t("playLog.loadingMore")} />
+					) : null
 				}
 			/>
 		</>

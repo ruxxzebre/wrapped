@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 import { type AlbumRow, api, type TrackRow } from "../api";
 import { fmtDate, fmtHours, fmtInt, fmtPct } from "../format";
+import { type TFunction, useT } from "../i18n";
 import { BackLink, TrackLink } from "../links";
 import {
 	type Column,
@@ -13,64 +14,65 @@ import {
 } from "../ui";
 import { Cards, MonthlyChart } from "../widgets";
 
-const ALBUM_COLUMNS: Column<AlbumRow>[] = [
-	{ key: "album", header: "album", cell: (a) => a.album },
+const albumColumns = (t: TFunction): Column<AlbumRow>[] => [
+	{ key: "album", header: t("col.album"), cell: (a) => a.album },
 	{
 		key: "plays",
-		header: "plays",
+		header: t("col.plays"),
 		align: "right",
 		cell: (a) => fmtInt(a.plays),
 	},
 	{
 		key: "hours",
-		header: "hours",
+		header: t("col.hours"),
 		align: "right",
 		cell: (a) => fmtHours(a.hours),
 	},
 ];
 
-const TRACK_COLUMNS: Column<TrackRow>[] = [
+const trackColumns = (t: TFunction): Column<TrackRow>[] => [
 	{
 		key: "rank",
-		header: "#",
+		header: t("col.rank"),
 		width: "2rem",
 		muted: true,
 		cell: (_, i) => i + 1,
 	},
 	{
 		key: "track",
-		header: "track",
-		cell: (t) => <TrackLink uri={t.track_uri} name={t.name} />,
+		header: t("col.track"),
+		cell: (row) => <TrackLink uri={row.track_uri} name={row.name} />,
 	},
 	{
 		key: "plays",
-		header: "plays",
+		header: t("col.plays"),
 		align: "right",
-		cell: (t) => fmtInt(t.plays),
+		cell: (row) => fmtInt(row.plays),
 	},
 	{
 		key: "hours",
-		header: "hours",
+		header: t("col.hours"),
 		align: "right",
-		cell: (t) => fmtHours(t.hours),
+		cell: (row) => fmtHours(row.hours),
 	},
 	{
 		key: "skip",
-		header: "skip",
+		header: t("col.skip"),
 		align: "right",
 		muted: true,
-		cell: (t) => fmtPct(t.skip_ratio),
+		cell: (row) => fmtPct(row.skip_ratio),
 	},
 	{
 		key: "last",
-		header: "last",
+		header: t("col.last"),
 		align: "right",
 		muted: true,
-		cell: (t) => fmtDate(t.last_play),
+		cell: (row) => fmtDate(row.last_play),
 	},
 ];
 
 export default function ArtistDetail({ name }: { name: string }) {
+	const t = useT();
 	const detail = useQuery({
 		queryKey: ["artist", name],
 		queryFn: () => api.artist(name),
@@ -94,19 +96,19 @@ export default function ArtistDetail({ name }: { name: string }) {
 	const d = detail.data;
 
 	const cards = [
-		{ label: "plays", value: fmtInt(d.plays) },
-		{ label: "hours", value: fmtHours(d.hours) },
-		{ label: "tracks", value: fmtInt(d.tracks) },
-		{ label: "skip rate", value: fmtPct(d.skip_ratio) },
+		{ label: t("card.plays"), value: fmtInt(d.plays) },
+		{ label: t("card.hours"), value: fmtHours(d.hours) },
+		{ label: t("card.tracks"), value: fmtInt(d.tracks) },
+		{ label: t("detail.skipRate"), value: fmtPct(d.skip_ratio) },
 		{
-			label: "rank",
-			value: d.rank_plays ? `#${fmtInt(d.rank_plays)}` : "—",
-			sub: "by plays, lifetime",
+			label: t("detail.rank"),
+			value: d.rank_plays ? `#${fmtInt(d.rank_plays)}` : t("common.dash"),
+			sub: t("detail.byPlaysLifetime"),
 		},
 		{
-			label: "first heard",
+			label: t("detail.firstHeard"),
 			value: fmtDate(d.first_play),
-			sub: `latest ${fmtDate(d.last_play)}`,
+			sub: t("summary.latest", { date: fmtDate(d.last_play) }),
 		},
 	];
 
@@ -118,10 +120,13 @@ export default function ArtistDetail({ name }: { name: string }) {
 				sub={
 					top3Share !== null && (
 						<Muted>
-							top 3 tracks = {fmtPct(top3Share)} of plays —{" "}
-							{top3Share > 0.6
-								? "you live on the hits"
-								: "you work the whole catalogue"}
+							{t("artist.top3", {
+								pct: fmtPct(top3Share),
+								verdict:
+									top3Share > 0.6
+										? t("artist.liveOnHits")
+										: t("artist.wholeCatalogue"),
+							})}
 						</Muted>
 					)
 				}
@@ -129,15 +134,15 @@ export default function ArtistDetail({ name }: { name: string }) {
 
 			<Cards items={cards} />
 
-			<Panel title="Hours per month">
+			<Panel title={t("artist.hoursPerMonth")}>
 				<MonthlyChart data={d.monthly} metric="hours" area />
 			</Panel>
 
 			{d.albums.length > 0 && (
-				<Panel title="Top albums by hours">
+				<Panel title={t("artist.topAlbums")}>
 					<DataTable
 						rows={d.albums}
-						columns={ALBUM_COLUMNS}
+						columns={albumColumns(t)}
 						rowKey={(a) => a.album}
 					/>
 				</Panel>
@@ -145,7 +150,9 @@ export default function ArtistDetail({ name }: { name: string }) {
 
 			<Panel
 				title={
-					<>All tracks {tracks.data && `(${fmtInt(tracks.data.length)})`}</>
+					tracks.data
+						? t("artist.allTracksCount", { count: fmtInt(tracks.data.length) })
+						: t("artist.allTracks")
 				}
 			>
 				{!tracks.data ? (
@@ -153,8 +160,8 @@ export default function ArtistDetail({ name }: { name: string }) {
 				) : (
 					<DataTable
 						rows={tracks.data}
-						columns={TRACK_COLUMNS}
-						rowKey={(t) => t.track_uri}
+						columns={trackColumns(t)}
+						rowKey={(row) => row.track_uri}
 					/>
 				)}
 			</Panel>

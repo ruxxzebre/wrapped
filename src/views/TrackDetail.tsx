@@ -1,19 +1,13 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../api";
-import {
-	fmtCompletion,
-	fmtDate,
-	fmtDuration,
-	fmtHours,
-	fmtInt,
-	fmtPct,
-	fmtReasonStart,
-} from "../format";
+import { fmtDate, fmtDuration, fmtHours, fmtInt, fmtPct } from "../format";
+import { tEnum, useT } from "../i18n";
 import { ArtistLink, BackLink, SpotifyEmbed, SpotifyLink } from "../links";
 import { DetailHead, Grid2, Muted, Panel, Status } from "../ui";
 import { Breakdown, Cards, HourBars, MonthlyChart } from "../widgets";
 
 export default function TrackDetail({ uri }: { uri: string }) {
+	const t = useT();
 	const { data, error } = useQuery({
 		queryKey: ["track", uri],
 		queryFn: () => api.track(uri),
@@ -21,23 +15,23 @@ export default function TrackDetail({ uri }: { uri: string }) {
 	if (!data) return <Status error={error} />;
 
 	const cards = [
-		{ label: "plays", value: fmtInt(data.plays) },
-		{ label: "hours", value: fmtHours(data.hours) },
-		{ label: "skip rate", value: fmtPct(data.skip_ratio) },
+		{ label: t("card.plays"), value: fmtInt(data.plays) },
+		{ label: t("card.hours"), value: fmtHours(data.hours) },
+		{ label: t("detail.skipRate"), value: fmtPct(data.skip_ratio) },
 		{
-			label: "length",
-			value: data.max_ms ? fmtDuration(data.max_ms) : "—",
-			sub: "longest play",
+			label: t("detail.length"),
+			value: data.max_ms ? fmtDuration(data.max_ms) : t("common.dash"),
+			sub: t("detail.longestPlay"),
 		},
 		{
-			label: "rank",
-			value: data.rank_plays ? `#${fmtInt(data.rank_plays)}` : "—",
-			sub: "by plays, lifetime",
+			label: t("detail.rank"),
+			value: data.rank_plays ? `#${fmtInt(data.rank_plays)}` : t("common.dash"),
+			sub: t("detail.byPlaysLifetime"),
 		},
 		{
-			label: "first heard",
+			label: t("detail.firstHeard"),
 			value: fmtDate(data.first_play),
-			sub: `latest ${fmtDate(data.last_play)}`,
+			sub: t("summary.latest", { date: fmtDate(data.last_play) }),
 		},
 	];
 
@@ -58,28 +52,28 @@ export default function TrackDetail({ uri }: { uri: string }) {
 
 			<SpotifyEmbed uri={uri} />
 
-			<Panel title="Plays per month">
+			<Panel title={t("track.playsPerMonth")}>
 				<MonthlyChart data={data.monthly} metric="plays" />
 			</Panel>
 
-			<Panel title="When you play it (hour of day)">
+			<Panel title={t("track.whenYouPlay")}>
 				<HourBars data={data.hourly} />
 			</Panel>
 
 			<Grid2>
 				<Breakdown
-					title="Completion"
+					title={t("track.completion")}
 					rows={data.completion}
-					fmtLabel={fmtCompletion}
+					fmtLabel={(l) => tEnum(t, "completion", l)}
 				/>
 				<Breakdown
-					title="How it starts"
+					title={t("track.howItStarts")}
 					rows={data.reason_start}
-					fmtLabel={fmtReasonStart}
+					fmtLabel={(l) => tEnum(t, "reasonStart", l)}
 				/>
 			</Grid2>
 
-			<Breakdown title="Platforms" rows={data.platforms} />
+			<Breakdown title={t("track.platforms")} rows={data.platforms} />
 		</>
 	);
 }

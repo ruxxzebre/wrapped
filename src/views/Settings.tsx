@@ -2,6 +2,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "../api";
 import { recreateListensView } from "../db/lifecycle";
+import { LANGUAGES, useT } from "../i18n";
 import { setSetting, useSetting } from "../settings";
 import { Button, Modal, Muted, Panel, Select, Stack } from "../ui";
 import * as css from "./Settings.css";
@@ -9,8 +10,10 @@ import * as css from "./Settings.css";
 const TIMEZONES = Intl.supportedValuesOf("timeZone");
 
 export default function Settings() {
+	const t = useT();
 	const showPlayer = useSetting("showPlayer");
 	const timezone = useSetting("timezone");
+	const language = useSetting("language");
 	const qc = useQueryClient();
 	const [tzBusy, setTzBusy] = useState(false);
 	const [confirmClear, setConfirmClear] = useState(false);
@@ -50,7 +53,32 @@ export default function Settings() {
 
 	return (
 		<Stack>
-			<Panel title="Playback">
+			<Panel title={t("settings.language")}>
+				{/* biome-ignore lint/a11y/noLabelWithoutControl: the control is the Select component */}
+				<label className={css.row}>
+					<Select
+						value={language}
+						onChange={(e) =>
+							setSetting(
+								"language",
+								e.target.value as (typeof LANGUAGES)[number]["code"] | "auto",
+							)
+						}
+					>
+						<option value="auto">{t("settings.languageAuto")}</option>
+						{LANGUAGES.map((l) => (
+							<option key={l.code} value={l.code}>
+								{l.label}
+							</option>
+						))}
+					</Select>
+					<span className={css.label}>
+						{t("settings.language")}
+						<Muted>{t("settings.languageHint")}</Muted>
+					</span>
+				</label>
+			</Panel>
+			<Panel title={t("settings.playback")}>
 				<label className={css.row}>
 					<input
 						type="checkbox"
@@ -59,15 +87,12 @@ export default function Settings() {
 						onChange={(e) => setSetting("showPlayer", e.target.checked)}
 					/>
 					<span className={css.label}>
-						Show embedded Spotify player
-						<Muted>
-							Renders an in-page player on each track page. Hidden automatically
-							when a track isn't available on Spotify.
-						</Muted>
+						{t("settings.showPlayer")}
+						<Muted>{t("settings.showPlayerHint")}</Muted>
 					</span>
 				</label>
 			</Panel>
-			<Panel title="Time">
+			<Panel title={t("settings.time")}>
 				{/* biome-ignore lint/a11y/noLabelWithoutControl: the control is the Select component */}
 				<label className={css.row}>
 					<Select
@@ -82,56 +107,47 @@ export default function Settings() {
 						))}
 					</Select>
 					<span className={css.label}>
-						Timezone
-						<Muted>
-							Hour-of-day, weekday and calendar charts bucket plays in this
-							timezone. Defaults to your browser's. Pick the timezone you
-							actually lived in if it differs.
-						</Muted>
+						{t("settings.timezone")}
+						<Muted>{t("settings.timezoneHint")}</Muted>
 					</span>
 				</label>
 			</Panel>
-			<Panel title="Danger zone">
+			<Panel title={t("settings.dangerZone")}>
 				<div className={css.dangerRow}>
 					<Button
 						variant="danger"
 						disabled={clearBusy}
 						onClick={() => setConfirmClear(true)}
 					>
-						Clear library
+						{t("settings.clearLibrary")}
 					</Button>
 					<span className={css.label}>
-						Delete imported data
-						<Muted>
-							Wipes the database and its saved snapshot, returning you to the
-							welcome screen. This can't be undone — you'll need to re-import
-							your Spotify export.
-						</Muted>
+						{t("settings.deleteImported")}
+						<Muted>{t("settings.clearLibraryHint")}</Muted>
 					</span>
 				</div>
 			</Panel>
 			{confirmClear && (
 				<Modal onClose={() => !clearBusy && setConfirmClear(false)}>
 					<Stack>
-						<strong>Clear your library?</strong>
-						<Muted>
-							This permanently deletes all imported listening data from this
-							browser. You can re-import your Spotify export afterwards.
-						</Muted>
+						<strong>{t("settings.confirmClearTitle")}</strong>
+						<Muted>{t("settings.confirmClearBody")}</Muted>
 						<div className={css.modalActions}>
 							<Button
 								variant="chrome"
 								disabled={clearBusy}
 								onClick={() => setConfirmClear(false)}
 							>
-								Cancel
+								{t("common.cancel")}
 							</Button>
 							<Button
 								variant="danger"
 								disabled={clearBusy}
 								onClick={() => void clearLibrary()}
 							>
-								{clearBusy ? "Clearing…" : "Clear library"}
+								{clearBusy
+									? t("settings.clearing")
+									: t("settings.clearLibrary")}
 							</Button>
 						</div>
 					</Stack>

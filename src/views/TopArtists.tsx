@@ -1,8 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { api, type Metric, type TopArtist, type Window } from "../api";
 import { MetricToggle, WindowPicker } from "../controls";
 import { fmtHours, fmtInt } from "../format";
+import { type TFunction, useT } from "../i18n";
 import { ArtistLink } from "../links";
 import {
 	type Column,
@@ -14,43 +15,45 @@ import {
 	Status,
 } from "../ui";
 
-const COLUMNS: Column<TopArtist>[] = [
+const columns = (t: TFunction): Column<TopArtist>[] => [
 	{
 		key: "rank",
-		header: "#",
+		header: t("col.rank"),
 		width: "2rem",
 		muted: true,
 		cell: (_, i) => i + 1,
 	},
 	{
 		key: "artist",
-		header: "artist",
+		header: t("col.artist"),
 		cell: (a) => <ArtistLink name={a.artist} />,
 	},
 	{
 		key: "plays",
-		header: "plays",
+		header: t("col.plays"),
 		align: "right",
 		cell: (a) => fmtInt(a.plays),
 	},
 	{
 		key: "hours",
-		header: "hours",
+		header: t("col.hours"),
 		align: "right",
 		cell: (a) => fmtHours(a.hours),
 	},
 	{
 		key: "tracks",
-		header: "tracks",
+		header: t("col.tracks"),
 		align: "right",
 		cell: (a) => fmtInt(a.tracks),
 	},
 ];
 
 export default function TopArtists() {
+	const t = useT();
 	const [metric, setMetric] = useState<Metric>("plays");
 	const [window, setWindow] = useState<Window>({});
 	const [limit, setLimit] = useState(100);
+	const COLUMNS = useMemo(() => columns(t), [t]);
 
 	const { data, error } = useQuery({
 		queryKey: ["topArtists", metric, window, limit],
@@ -63,7 +66,7 @@ export default function TopArtists() {
 			<ControlsBar>
 				<MetricToggle value={metric} onChange={setMetric} />
 				<WindowPicker value={window} onChange={setWindow} />
-				<Field label="limit">
+				<Field label={t("controls.limit")}>
 					<Select
 						value={limit}
 						onChange={(e) => setLimit(Number(e.target.value))}

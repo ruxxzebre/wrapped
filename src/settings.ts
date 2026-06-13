@@ -1,4 +1,5 @@
 import { useSyncExternalStore } from "react";
+import type { LanguageSetting } from "./i18n";
 
 // Client-only preferences, persisted to localStorage. No backend round-trip:
 // these are presentation toggles local to this browser. A tiny external store
@@ -13,11 +14,14 @@ export type Settings = {
 	 * started_local column). Defaults to the browser's timezone.
 	 */
 	timezone: string;
+	/** UI language, or "auto" to follow the browser/system language. */
+	language: LanguageSetting;
 };
 
 const DEFAULTS: Settings = {
 	showPlayer: true,
 	timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+	language: "auto",
 };
 
 const KEY = "wrapped:settings";

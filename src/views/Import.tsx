@@ -2,6 +2,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { type DragEvent, useRef, useState } from "react";
 import { api } from "../api";
 import { asset } from "../asset";
+import { fillNodes, useT } from "../i18n";
 import { navigate } from "../router";
 import { Panel } from "../ui";
 import * as css from "./Import.css";
@@ -19,28 +20,12 @@ function isZip(file: File) {
 	);
 }
 
-// Walkthrough for requesting and downloading the Spotify export, shown on the
-// welcome gate when a first-timer doesn't yet have their my_spotify_data.zip.
-const STEPS: { img?: string; title: string; text: string }[] = [
-	{
-		img: asset("steps/step_1.png"),
-		title: "Find your account",
-		text: "Go to spotify.com, log in, then open the Account menu in the top-right.",
-	},
-	{
-		img: asset("steps/step_2.png"),
-		title: "Open Account privacy",
-		text: "In the account settings sidebar, scroll to the Account privacy section.",
-	},
-	{
-		img: asset("steps/step_3.png"),
-		title: "Request your data",
-		text: "Under “Download your data”, locate Extended streaming history and tick it, untick Account data, then hit Request data.",
-	},
-	{
-		title: "Wait for the email",
-		text: "Spotify emails a confirmation link — click it to start the export. After a while (often a few days) they send a download link. Grab the my_spotify_data.zip and drop it here — no need to unzip.",
-	},
+// Images for the export walkthrough; the copy is translated per step at render.
+const STEP_IMAGES = [
+	asset("steps/step_1.png"),
+	asset("steps/step_2.png"),
+	asset("steps/step_3.png"),
+	undefined,
 ];
 
 /**
@@ -55,17 +40,24 @@ export default function Import({
 }: {
 	variant?: "welcome" | "reimport";
 } = {}) {
+	const t = useT();
 	const qc = useQueryClient();
 	const inputRef = useRef<HTMLInputElement>(null);
 	const [phase, setPhase] = useState<Phase>({ kind: "idle" });
 	const [dragging, setDragging] = useState(false);
 	const [showTutorial, setShowTutorial] = useState(false);
 
+	const steps = STEP_IMAGES.map((img, i) => ({
+		img,
+		title: t(`import.step${i + 1}Title` as "import.step1Title"),
+		text: t(`import.step${i + 1}Text` as "import.step1Text"),
+	}));
+
 	const busy = phase.kind === "uploading" || phase.kind === "ingesting";
 
 	async function importFile(file: File) {
 		if (!isZip(file)) {
-			setPhase({ kind: "error", message: "Please drop a .zip archive." });
+			setPhase({ kind: "error", message: t("import.errZip") });
 			return;
 		}
 		setPhase({ kind: "uploading", fraction: 0 });
@@ -88,7 +80,7 @@ export default function Import({
 		} catch (err) {
 			setPhase({
 				kind: "error",
-				message: err instanceof Error ? err.message : "Import failed.",
+				message: err instanceof Error ? err.message : t("import.errFailed"),
 			});
 		}
 	}
@@ -103,15 +95,15 @@ export default function Import({
 
 	const tutorial = (
 		<div className={css.card}>
-			<h1 className={css.heading}>Get your Spotify data</h1>
+			<h1 className={css.heading}>{t("import.getData")}</h1>
 			<ol className={css.steps}>
-				{STEPS.map((step, i) => (
+				{steps.map((step, i) => (
 					<li key={step.title} className={css.step}>
 						{step.img && (
 							<img
 								className={css.stepImg}
 								src={step.img}
-								alt={`Step ${i + 1}: ${step.title}`}
+								alt={t("import.stepAlt", { n: i + 1, title: step.title })}
 								loading="lazy"
 							/>
 						)}
@@ -130,7 +122,7 @@ export default function Import({
 				className={css.backLink}
 				onClick={() => setShowTutorial(false)}
 			>
-				← Back to upload
+				← {t("import.backToUpload")}
 			</button>
 		</div>
 	);
@@ -139,17 +131,15 @@ export default function Import({
 		<div className={css.card}>
 			{variant === "welcome" ? (
 				<>
-					<h1 className={css.heading}>Welcome to Wrapped</h1>
+					<h1 className={css.heading}>{t("import.welcomeTitle")}</h1>
 					<p className={css.lede}>
-						No listening history yet. Drop your{" "}
-						<strong>my_spotify_data.zip</strong> below to get started
+						{fillNodes(t("import.welcomeLede"), {
+							file: <strong>my_spotify_data.zip</strong>,
+						})}
 					</p>
 				</>
 			) : (
-				<p className={css.lede}>
-					Import a Spotify export to replace everything currently loaded. This
-					overwrites your existing data.
-				</p>
+				<p className={css.lede}>{t("import.reimportLede")}</p>
 			)}
 
 			<button
@@ -179,30 +169,26 @@ export default function Import({
 							/>
 						</div>
 						<p className={css.hint}>
-							Reading export… {Math.round(phase.fraction * 100)}%
+							{t("import.reading", { pct: Math.round(phase.fraction * 100) })}
 						</p>
 					</>
 				) : phase.kind === "ingesting" ? (
-					<p className={css.working}>
-						Importing history… this can take a moment.
-					</p>
+					<p className={css.working}>{t("import.importing")}</p>
 				) : phase.kind === "done" ? (
 					<>
 						<span className={css.dropIcon} aria-hidden="true">
 							✓
 						</span>
-						<span>Import complete — your data has been replaced.</span>
-						<p className={css.hint}>Drop another archive to import again.</p>
+						<span>{t("import.complete")}</span>
+						<p className={css.hint}>{t("import.dropAnother")}</p>
 					</>
 				) : (
 					<>
 						<span className={css.dropIcon} aria-hidden="true">
 							⬆
 						</span>
-						<span>Drop my_spotify_data.zip here, or click to choose</span>
-						<p className={css.hint}>
-							Only the .zip — no need to unzip it first.
-						</p>
+						<span>{t("import.dropHere")}</span>
+						<p className={css.hint}>{t("import.onlyZip")}</p>
 					</>
 				)}
 			</button>
@@ -216,14 +202,12 @@ export default function Import({
 					className={css.tutorialLink}
 					onClick={() => setShowTutorial(true)}
 				>
-					Learn how to load your data from Spotify
+					{t("import.learnHow")}
 				</button>
 			)}
 
 			{variant === "reimport" && phase.kind === "idle" && (
-				<p className={css.warnText}>
-					⚠ Re-importing replaces all currently loaded data.
-				</p>
+				<p className={css.warnText}>⚠ {t("import.reimportWarn")}</p>
 			)}
 
 			<input
