@@ -55,7 +55,7 @@ export default function Settings() {
 		<Stack>
 			<Panel title={t("settings.language")}>
 				{/* biome-ignore lint/a11y/noLabelWithoutControl: the control is the Select component */}
-				<label className={css.row}>
+				<label className={css.selectRow}>
 					<Select
 						value={language}
 						onChange={(e) =>
@@ -94,7 +94,7 @@ export default function Settings() {
 			</Panel>
 			<Panel title={t("settings.time")}>
 				{/* biome-ignore lint/a11y/noLabelWithoutControl: the control is the Select component */}
-				<label className={css.row}>
+				<label className={css.selectRow}>
 					<Select
 						value={timezone}
 						disabled={tzBusy}
