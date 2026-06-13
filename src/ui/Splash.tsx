@@ -1,3 +1,4 @@
+import { asset } from "../asset";
 import { useBootStatus } from "../db/boot";
 import * as css from "./Splash.css";
 
@@ -11,7 +12,7 @@ export function Splash({ error }: { error?: Error | null }) {
 	const status = useBootStatus();
 	return (
 		<div className={css.root}>
-			<img className={css.logo} src="/favicon.svg" alt="" width={56} />
+			<img className={css.logo} src={asset("favicon.svg")} alt="" width={56} />
 			<h1 className={css.wordmark}>Wrapped</h1>
 			{error ? (
 				<p className={css.error}>{error.message}</p>

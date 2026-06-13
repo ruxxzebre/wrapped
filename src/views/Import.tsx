@@ -1,6 +1,7 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { type DragEvent, useRef, useState } from "react";
 import { api } from "../api";
+import { asset } from "../asset";
 import { Panel } from "../ui";
 import * as css from "./Import.css";
 
@@ -21,17 +22,17 @@ function isZip(file: File) {
 // welcome gate when a first-timer doesn't yet have their my_spotify_data.zip.
 const STEPS: { img?: string; title: string; text: string }[] = [
 	{
-		img: "/steps/step_1.png",
+		img: asset("steps/step_1.png"),
 		title: "Find your account",
 		text: "Go to spotify.com, log in, then open the Account menu in the top-right.",
 	},
 	{
-		img: "/steps/step_2.png",
+		img: asset("steps/step_2.png"),
 		title: "Open Account privacy",
 		text: "In the account settings sidebar, scroll to the Account privacy section.",
 	},
 	{
-		img: "/steps/step_3.png",
+		img: asset("steps/step_3.png"),
 		title: "Request your data",
 		text: "Under “Download your data”, locate Extended streaming history and tick it, untick Account data, then hit Request data.",
 	},
