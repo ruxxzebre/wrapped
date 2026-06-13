@@ -1,6 +1,15 @@
 import { globalStyle, style } from "@vanilla-extract/css";
 import { vars } from "./ui/theme.css";
 
+// Faux bar chart: bars sit on a shared baseline like the real BarChart, so the
+// panel keeps its height and nothing shifts when the chart mounts.
+export const chartSkeleton = style({
+	display: "flex",
+	alignItems: "flex-end",
+	gap: vars.space.md,
+	paddingTop: vars.space.lg,
+});
+
 // Proportion breakdown lists (platform split, start reasons, completion).
 export const breakdown = style({
 	display: "flex",

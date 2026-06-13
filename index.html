@@ -5,9 +5,88 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Wrapped</title>
+    <!-- icu (timezone) DuckDB extension is fetched from here on first boot;
+                 warm the DNS/TLS so it isn't on the critical path cold. -->
+    <link rel="preconnect" href="https://extensions.duckdb.org" crossorigin />
+    <style>
+      /* Static boot splash: paints on HTML parse, before the JS bundle loads
+                 and React mounts, so there's no white flash. React's createRoot clears
+                 #root on mount, handing off to the matching <Splash> component. Values
+                 mirror the theme (bg #121212, accent #1db954) since vanilla-extract
+                 vars aren't available this early. */
+      :root {
+        color-scheme: dark;
+      }
+    
+      body {
+        margin: 0;
+        background: #121212;
+        color: #fff;
+        font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+      }
+    
+      #boot-splash {
+        height: 100dvh;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 1rem;
+        text-align: center;
+      }
+    
+      #boot-splash img {
+        width: 56px;
+        height: auto;
+      }
+    
+      #boot-splash h1 {
+        margin: 0;
+        font-size: 1.875rem;
+        font-weight: 800;
+        letter-spacing: -0.02em;
+        line-height: 1.1;
+      }
+    
+      #boot-splash .spinner {
+        width: 22px;
+        height: 22px;
+        border-radius: 50%;
+        border: 2px solid rgba(255, 255, 255, 0.1);
+        border-top-color: #1db954;
+        animation: boot-spin 700ms linear infinite;
+      }
+    
+      #boot-splash p {
+        margin: 0;
+        color: #b3b3b3;
+        font-size: 0.875rem;
+        line-height: 1.2;
+        min-height: 1.2em;
+      }
+    
+      @keyframes boot-spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+    
+      @media (prefers-reduced-motion: reduce) {
+        #boot-splash .spinner {
+          animation-duration: 0.01ms;
+        }
+      }
+    </style>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <div id="boot-splash">
+        <img src="/favicon.svg" alt="" width="56" />
+        <h1>Wrapped</h1>
+        <div class="spinner"></div>
+        <p>Starting up…</p>
+      </div>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

@@ -1,5 +1,6 @@
 import { type Unzipped, unzip } from "fflate";
 import { getSetting } from "../settings";
+import { setBootStatus } from "./boot";
 import { getDB, query } from "./duckdb";
 import { loadSnapshot, saveSnapshot } from "./opfs";
 import { createListensView, rebuildPlays } from "./schema";
@@ -45,6 +46,7 @@ export async function ensureReady(): Promise<{ ready: boolean }> {
 	const snap = await loadSnapshot();
 	if (!snap) return { ready: false };
 
+	setBootStatus("Restoring your library…");
 	const db = await getDB();
 	await db.registerFileBuffer(VFS_SNAPSHOT, snap);
 	try {

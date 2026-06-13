@@ -4,6 +4,7 @@ import mvpWorkerUrl from "@duckdb/duckdb-wasm/dist/duckdb-browser-mvp.worker.js?
 import ehWasmUrl from "@duckdb/duckdb-wasm/dist/duckdb-eh.wasm?url";
 import mvpWasmUrl from "@duckdb/duckdb-wasm/dist/duckdb-mvp.wasm?url";
 import { type Table, Type } from "apache-arrow";
+import { setBootStatus } from "./boot";
 
 // DuckDB-WASM bootstrap. Bundles are vite-bundled (?url imports) rather than
 // pulled from jsdelivr so the app stays fully static and same-origin. The
@@ -18,6 +19,7 @@ let dbPromise: Promise<duckdb.AsyncDuckDB> | null = null;
 let connPromise: Promise<duckdb.AsyncDuckDBConnection> | null = null;
 
 async function init(): Promise<duckdb.AsyncDuckDB> {
+	setBootStatus("Starting the database engine…");
 	const bundle = await duckdb.selectBundle(BUNDLES);
 	if (!bundle.mainWorker) throw new Error("no suitable DuckDB bundle");
 	const worker = new Worker(bundle.mainWorker);
@@ -38,6 +40,7 @@ async function openConn(): Promise<duckdb.AsyncDuckDBConnection> {
 	const conn = await db.connect();
 	// AT TIME ZONE needs icu. In WASM it's a dynamically loaded extension
 	// fetched from the default extension repository on first load.
+	setBootStatus("Loading timezone extension…");
 	await conn.query("INSTALL icu");
 	await conn.query("LOAD icu");
 	// All queries use explicit AT TIME ZONE conversions; pin the session TZ so

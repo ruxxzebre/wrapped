@@ -6,7 +6,7 @@ import { api } from "./api";
 import CommandPalette from "./components/CommandPalette";
 import { navigate } from "./router";
 import { TABS } from "./tabs";
-import { Button, PageHeader, Status } from "./ui";
+import { Button, PageHeader, Splash } from "./ui";
 import Import from "./views/Import";
 
 export default function App() {
@@ -55,20 +55,8 @@ export default function App() {
 	// Status gate, after all hooks so hook order stays stable. A database that's
 	// initialized but empty shows the welcome importer; an init failure surfaces
 	// its error rather than a blank dashboard.
-	if (statusError) {
-		return (
-			<div className={css.shell}>
-				<Status error={statusError as Error} />
-			</div>
-		);
-	}
-	if (!status) {
-		return (
-			<div className={css.shell}>
-				<Status />
-			</div>
-		);
-	}
+	if (statusError) return <Splash error={statusError as Error} />;
+	if (!status) return <Splash />;
 	if (!status.ready) return <Import variant="welcome" />;
 
 	return (

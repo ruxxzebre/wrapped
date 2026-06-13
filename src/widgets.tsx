@@ -11,7 +11,7 @@ import {
 } from "recharts";
 import type { Bucket, LabelCount, MonthCount } from "./api";
 import { fmtInt, fmtMonth } from "./format";
-import { Card, CardGrid, chartColors, Panel } from "./ui";
+import { Card, CardGrid, chartColors, Panel, Skeleton } from "./ui";
 import * as css from "./widgets.css";
 
 export type CardItem = { label: string; value: string; sub?: string };
@@ -23,6 +23,49 @@ export function Cards({ items }: { items: CardItem[] }) {
 				<Card key={c.label} label={c.label} value={c.value} sub={c.sub} />
 			))}
 		</CardGrid>
+	);
+}
+
+// Stable keys for the fixed-size placeholder collections below. Skeletons never
+// reorder, so a constant key list keeps React happy without an array index.
+const CARD_KEYS = ["c1", "c2", "c3", "c4", "c5", "c6", "c7", "c8"];
+
+// Placeholder for a Cards row. Reuses the real Card so padding, radius and grid
+// sizing match exactly — only the text is swapped for shimmer blocks.
+export function CardsSkeleton({ count = 6 }: { count?: number }) {
+	return (
+		<CardGrid>
+			{CARD_KEYS.slice(0, count).map((k) => (
+				<Card
+					key={k}
+					label={<Skeleton width={52} height={9} />}
+					value={<Skeleton width="70%" height={20} />}
+				/>
+			))}
+		</CardGrid>
+	);
+}
+
+// Relative bar heights for the faux chart; the keys double as React keys.
+const CHART_BARS = [
+	{ key: "g1", h: "55%" },
+	{ key: "g2", h: "78%" },
+	{ key: "g3", h: "40%" },
+	{ key: "g4", h: "92%" },
+	{ key: "g5", h: "63%" },
+	{ key: "g6", h: "82%" },
+	{ key: "g7", h: "48%" },
+];
+
+// Drop-in placeholder for any bar chart. Pass the same height the real
+// ResponsiveContainer uses so the panel doesn't resize on load.
+export function ChartSkeleton({ height = 240 }: { height?: number }) {
+	return (
+		<div className={css.chartSkeleton} style={{ height }} aria-busy="true">
+			{CHART_BARS.map((b) => (
+				<Skeleton key={b.key} height={b.h} radius={3} style={{ flex: 1 }} />
+			))}
+		</div>
 	);
 }
 

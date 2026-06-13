@@ -9,6 +9,8 @@ export { Modal } from "./Modal";
 export { PageHeader } from "./PageHeader";
 export { Panel } from "./Panel";
 export { chartColors, palette } from "./palette";
+export { Skeleton } from "./Skeleton";
+export { Splash } from "./Splash";
 export { Row, Stack } from "./Stack";
 export { Status } from "./Status";
 export { Muted } from "./Text";
