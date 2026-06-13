@@ -163,3 +163,42 @@ export const footerLink = style({
 	transition: "color 150ms",
 	selectors: { "&:hover": { color: vars.color.accentHover } },
 });
+
+// --- accordion sidebar groups --------------------------------------------
+export const navGroup = style({
+	display: "flex",
+	flexDirection: "column",
+	gap: vars.space.xs,
+});
+
+// Group header row: an uppercase, muted toggle with a chevron.
+export const groupHeader = style({
+	display: "flex",
+	alignItems: "center",
+	justifyContent: "space-between",
+	width: "100%",
+	background: "none",
+	border: "none",
+	cursor: "pointer",
+	fontFamily: "inherit",
+	color: vars.color.muted,
+	fontSize: "0.7rem",
+	fontWeight: 800,
+	letterSpacing: "0.08em",
+	textTransform: "uppercase",
+	padding: "0.5rem 0.9rem",
+	transition: "color 150ms",
+	selectors: { "&:hover": { color: vars.color.text } },
+});
+
+export const chevron = style({
+	fontSize: "0.7rem",
+});
+
+// Leaves indent slightly under their group header.
+export const groupLeaves = style({
+	display: "flex",
+	flexDirection: "column",
+	gap: vars.space.xs,
+	paddingLeft: vars.space.sm,
+});

@@ -1,3 +1,4 @@
+// import { Link as _Link } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 
 // Navigation primitives over hash URLs. Route matching lives in routes.tsx
@@ -27,6 +28,12 @@ export function Link({
 	title?: string;
 	children: ReactNode;
 }) {
+	// return (
+	// 	<Link to={to} className={className}>
+	// 		{title}
+	// 		{children}
+	// 	</Link>
+	// );
 	return (
 		<a href={`#${to}`} className={className} title={title}>
 			{children}

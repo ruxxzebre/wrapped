@@ -62,7 +62,7 @@ const columns = (t: TFunction): VColumn<PlayRow>[] => [
 // cursor) and only the fetched window is rendered, virtualized.
 export default function PlayLog() {
 	const t = useT();
-	const { from: qFrom, to: qTo } = useSearch({ from: "/play-log" });
+	const { from: qFrom, to: qTo } = useSearch({ from: "/explore/play-log" });
 	const COLUMNS = useMemo(() => columns(t), [t]);
 
 	const [search, setSearch] = useState("");

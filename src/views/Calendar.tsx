@@ -174,7 +174,10 @@ function Heatmap({ year, days }: { year: number; days: DayCount[] }) {
 								className={plays ? `${css.cell} ${css.cellActive}` : css.cell}
 								onClick={
 									plays
-										? () => navigate(`/play-log?from=${c.date}&to=${c.date}`)
+										? () =>
+												navigate(
+													`/explore/play-log?from=${c.date}&to=${c.date}`,
+												)
 										: undefined
 								}
 							>

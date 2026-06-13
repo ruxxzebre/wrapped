@@ -4,9 +4,9 @@ import { useEffect, useRef, useState } from "react";
 import * as css from "./App.css";
 import { api } from "./api";
 import CommandPalette from "./components/CommandPalette";
-import { type TKey, useLang, useT } from "./i18n";
+import { useLang, useT } from "./i18n";
 import { navigate } from "./router";
-import { TABS } from "./tabs";
+import { leafActive, NAV } from "./tabs";
 import { Button, PageHeader, Splash } from "./ui";
 import Import from "./views/Import";
 
@@ -14,21 +14,16 @@ export default function App() {
 	const t = useT();
 	const lang = useLang();
 	const pathname = useRouterState({ select: (s) => s.location.pathname });
-	// Tab routes carry their title/tint in staticData; detail routes don't, so
-	// they render without a PageHeader — same behavior as before the router
-	// migration.
 	const matches = useMatches();
-	const leaf = matches[matches.length - 1];
-	// Tab routes carry an English title in staticData only to flag "has a header";
-	// the displayed text is translated from the route's slug (which doubles as its
-	// nav key) so it follows the active language.
-	const title = leaf?.staticData.title
-		? t(`nav.${pathname}` as TKey)
+	// Title/tint come from the nearest matched route that defines them, so a
+	// nested child (/insights/patterns) inherits the parent group's "Insights"
+	// header. Detail routes define neither, so they render without a header.
+	const headed = [...matches].reverse().find((m) => m.staticData.titleKey);
+	const title = headed?.staticData.titleKey
+		? t(headed.staticData.titleKey)
 		: undefined;
-	const tint = leaf?.staticData.tint ?? "neutral";
-	// Bare tabs (Story) own the scroll pane for full-screen scroll-snap, so we
-	// drop the content wrapper and footer and let the body scroll itself.
-	const bare = leaf?.staticData.bare ?? false;
+	const tint = headed?.staticData.tint ?? "neutral";
+	const bare = matches.some((m) => m.staticData.bare ?? false);
 
 	// Gate the whole app on whether any history has been ingested. Until it has,
 	// the data endpoints would each error, so we show the import screen instead.
@@ -38,15 +33,35 @@ export default function App() {
 	});
 	const [paletteOpen, setPaletteOpen] = useState(false);
 	const [navOpen, setNavOpen] = useState(false);
+	// Which accordion groups are expanded. Seed with the group owning the route
+	// the app loaded on.
+	const [openGroups, setOpenGroups] = useState<Set<string>>(() => {
+		const init = new Set<string>();
+		for (const g of NAV)
+			if (
+				g.kind === "expand" &&
+				g.leaves.some((l) => leafActive(l.slug, pathname))
+			)
+				init.add(g.headerKey);
+		return init;
+	});
 	const mainRef = useRef<HTMLElement>(null);
 
-	// The body never scrolls; the main pane does. A route change also resets
-	// scroll and dismisses the mobile drawer. pathname is the intended trigger,
-	// not a value read inside the effect.
-	// biome-ignore lint/correctness/useExhaustiveDependencies: react to route change
+	// The body never scrolls; the main pane does. A route change resets scroll,
+	// dismisses the mobile drawer, and auto-expands the active group.
 	useEffect(() => {
 		mainRef.current?.scrollTo(0, 0);
 		setNavOpen(false);
+		setOpenGroups((prev) => {
+			const next = new Set(prev);
+			for (const g of NAV)
+				if (
+					g.kind === "expand" &&
+					g.leaves.some((l) => leafActive(l.slug, pathname))
+				)
+					next.add(g.headerKey);
+			return next;
+		});
 	}, [pathname]);
 
 	useEffect(() => {
@@ -68,12 +83,18 @@ export default function App() {
 		document.documentElement.lang = lang;
 	}, [lang]);
 
-	// Status gate, after all hooks so hook order stays stable. A database that's
-	// initialized but empty shows the welcome importer; an init failure surfaces
-	// its error rather than a blank dashboard.
+	// Status gate, after all hooks so hook order stays stable.
 	if (statusError) return <Splash error={statusError as Error} />;
 	if (!status) return <Splash />;
 	if (!status.ready) return <Import variant="welcome" />;
+
+	const toggleGroup = (key: string) =>
+		setOpenGroups((prev) => {
+			const next = new Set(prev);
+			if (next.has(key)) next.delete(key);
+			else next.add(key);
+			return next;
+		});
 
 	return (
 		<div className={css.shell}>
@@ -103,19 +124,54 @@ export default function App() {
 					{t("app.search")} <kbd>Ctrl K</kbd>
 				</Button>
 				<nav className={css.navList}>
-					{TABS.map((tab) => (
-						<Button
-							variant="nav"
-							key={tab.slug}
-							active={tab.slug === pathname}
-							onClick={() => {
-								navigate(tab.slug);
-								setNavOpen(false);
-							}}
-						>
-							{t(`nav.${tab.slug}` as TKey)}
-						</Button>
-					))}
+					{NAV.map((g) =>
+						g.kind === "link" ? (
+							<Button
+								key={g.headerKey}
+								variant="nav"
+								active={
+									pathname === g.slug || pathname.startsWith(`${g.slug}/`)
+								}
+								onClick={() => {
+									navigate(g.slug);
+									setNavOpen(false);
+								}}
+							>
+								{t(g.headerKey)}
+							</Button>
+						) : (
+							<div key={g.headerKey} className={css.navGroup}>
+								<button
+									type="button"
+									className={css.groupHeader}
+									aria-expanded={openGroups.has(g.headerKey)}
+									onClick={() => toggleGroup(g.headerKey)}
+								>
+									<span>{t(g.headerKey)}</span>
+									<span className={css.chevron} aria-hidden="true">
+										{openGroups.has(g.headerKey) ? "▾" : "▸"}
+									</span>
+								</button>
+								{openGroups.has(g.headerKey) && (
+									<div className={css.groupLeaves}>
+										{g.leaves.map((l) => (
+											<Button
+												key={l.slug}
+												variant="nav"
+												active={leafActive(l.slug, pathname)}
+												onClick={() => {
+													navigate(l.slug);
+													setNavOpen(false);
+												}}
+											>
+												{t(l.titleKey)}
+											</Button>
+										))}
+									</div>
+								)}
+							</div>
+						),
+					)}
 				</nav>
 			</aside>
 			{navOpen && (

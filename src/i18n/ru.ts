@@ -23,6 +23,15 @@ export const ru: Translation = {
 	"nav./compare": "Сравнение",
 	"nav./import": "Импорт",
 	"nav./settings": "Настройки",
+	"nav.group.home": "Главная",
+	"nav.group.music": "Музыка",
+	"nav.group.insights": "Аналитика",
+	"nav.group.timeline": "Хронология",
+	"nav.group.explore": "Исследовать",
+	"nav.group.system": "Система",
+	"nav.insights.overview": "Обзор",
+	"insights.dashboardTitle": "Аналитика",
+	"insights.empty": "Скоро появятся новые инсайты.",
 
 	// --- shared controls ---------------------------------------------------
 	"controls.rankBy": "сортировать по",
