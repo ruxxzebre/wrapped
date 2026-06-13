@@ -30,50 +30,52 @@ export function DataTable<T>({
 	};
 
 	return (
-		<table className={css.table}>
-			{showHeader && (
-				<thead>
-					<tr>
-						{columns.map((col) => {
-							const sortable = col.sortable && onSortChange;
-							const arrow =
-								sort?.key === col.key ? (sort.desc ? " ↓" : " ↑") : "";
-							const className = [
-								col.align === "right" ? css.num : undefined,
-								sortable ? css.sortable : undefined,
-							]
-								.filter(Boolean)
-								.join(" ");
-							return (
-								<th
+		<div className={css.scroll}>
+			<table className={css.table}>
+				{showHeader && (
+					<thead>
+						<tr>
+							{columns.map((col) => {
+								const sortable = col.sortable && onSortChange;
+								const arrow =
+									sort?.key === col.key ? (sort.desc ? " ↓" : " ↑") : "";
+								const className = [
+									col.align === "right" ? css.num : undefined,
+									sortable ? css.sortable : undefined,
+								]
+									.filter(Boolean)
+									.join(" ");
+								return (
+									<th
+										key={col.key}
+										className={className || undefined}
+										style={col.width ? { width: col.width } : undefined}
+										onClick={sortable ? () => toggleSort(col.key) : undefined}
+									>
+										{col.header}
+										{arrow}
+									</th>
+								);
+							})}
+						</tr>
+					</thead>
+				)}
+				<tbody>
+					{rows.map((row, i) => (
+						<tr key={rowKey(row, i)}>
+							{columns.map((col) => (
+								<td
 									key={col.key}
-									className={className || undefined}
+									className={cellClass(col as Column<unknown>)}
 									style={col.width ? { width: col.width } : undefined}
-									onClick={sortable ? () => toggleSort(col.key) : undefined}
 								>
-									{col.header}
-									{arrow}
-								</th>
-							);
-						})}
-					</tr>
-				</thead>
-			)}
-			<tbody>
-				{rows.map((row, i) => (
-					<tr key={rowKey(row, i)}>
-						{columns.map((col) => (
-							<td
-								key={col.key}
-								className={cellClass(col as Column<unknown>)}
-								style={col.width ? { width: col.width } : undefined}
-							>
-								{col.cell(row, i)}
-							</td>
-						))}
-					</tr>
-				))}
-			</tbody>
-		</table>
+									{col.cell(row, i)}
+								</td>
+							))}
+						</tr>
+					))}
+				</tbody>
+			</table>
+		</div>
 	);
 }

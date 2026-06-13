@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import * as css from "./links.css";
 import { artistPath, Link, trackPath } from "./router";
 import { useSetting } from "./settings";
-import { Button, Muted } from "./ui";
+import { Muted } from "./ui";
 
 function trackId(uri: string) {
 	return uri.startsWith("spotify:track:")
@@ -103,8 +103,16 @@ export function SpotifyEmbed({ uri }: { uri: string }) {
 
 export function BackLink() {
 	return (
-		<Button variant="link" onClick={() => history.back()}>
-			← back
-		</Button>
+		<button
+			type="button"
+			className={css.backButton}
+			onClick={() => history.back()}
+			aria-label="Go back to the previous page"
+		>
+			<span className={css.backIcon} aria-hidden="true">
+				←
+			</span>
+			Back
+		</button>
 	);
 }

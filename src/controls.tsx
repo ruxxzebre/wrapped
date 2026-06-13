@@ -51,6 +51,12 @@ export function WindowPicker({
 	const year = matchYear(value);
 	const preset = isAll ? "all" : year !== null ? String(year) : "custom";
 
+	// When no explicit bound is set the date inputs would render blank, which
+	// reads as broken. Fall back to the dataset's earliest play / today so the
+	// fields always show the range they actually cover.
+	const earliest = summary?.first_play?.slice(0, 10) ?? "";
+	const today = new Date().toISOString().slice(0, 10);
+
 	return (
 		<>
 			<Field label="period">
@@ -76,7 +82,7 @@ export function WindowPicker({
 			<Field label="from">
 				<Input
 					type="date"
-					value={value.from ?? ""}
+					value={value.from ?? earliest}
 					onChange={(e) =>
 						onChange({ ...value, from: e.target.value || undefined })
 					}
@@ -85,7 +91,7 @@ export function WindowPicker({
 			<Field label="to">
 				<Input
 					type="date"
-					value={value.to ?? ""}
+					value={value.to ?? today}
 					onChange={(e) =>
 						onChange({ ...value, to: e.target.value || undefined })
 					}
