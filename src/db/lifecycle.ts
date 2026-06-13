@@ -26,20 +26,26 @@ function currentTz(): string {
 	return getSetting("timezone");
 }
 
-async function hasPlaysTable(): Promise<boolean> {
-	const rows = await query<{ n: number }>(
-		"SELECT count(*) AS n FROM information_schema.tables WHERE table_name = 'plays'",
-	);
-	return (rows[0]?.n ?? 0) > 0;
-}
+// True once the plays table is live in the in-memory DB this session (restored
+// from OPFS or freshly ingested). We track it with a flag instead of querying
+// information_schema so ensureReady can answer "not ready" for a first-time
+// visitor WITHOUT booting DuckDB — the engine boot (worker + wasm + icu fetch)
+// takes seconds, and a fresh load's in-memory DB is always empty, so the only
+// thing that decides readiness is whether an OPFS snapshot exists. That check
+// is a plain file-handle lookup, letting the upload screen paint immediately
+// while the engine warms in the background (kicked off in main.tsx).
+let playsLoaded = false;
 
 /**
  * Reports whether data is available, restoring the parquet snapshot from OPFS
- * into the in-memory database when one exists. Recreates the listens view
- * either way so a stale view definition can't survive a code change.
+ * into the in-memory database when one exists. The snapshot existence check
+ * runs before any DuckDB call so a visitor with no data never waits on the
+ * engine boot just to reach the importer.
  */
 export async function ensureReady(): Promise<{ ready: boolean }> {
-	if (await hasPlaysTable()) {
+	if (playsLoaded) {
+		// Already loaded this session (e.g. the post-import status refetch).
+		// Re-assert the view so a stale definition can't survive a code change.
 		await createListensView(currentTz());
 		return { ready: true };
 	}
@@ -57,6 +63,7 @@ export async function ensureReady(): Promise<{ ready: boolean }> {
 		await db.dropFile(VFS_SNAPSHOT).catch(() => {});
 	}
 	await createListensView(currentTz());
+	playsLoaded = true;
 	return { ready: true };
 }
 
@@ -64,15 +71,22 @@ export async function ensureReady(): Promise<{ ready: boolean }> {
  * Imports a Spotify export zip: extracts the audio history JSON files,
  * registers them in DuckDB's virtual FS, drops and rebuilds the plays table
  * (so importing a new archive fully overwrites prior data), then snapshots to
- * OPFS. Progress covers unzip + registration; fraction 1 means SQL ingest is
- * running (the caller shows an indeterminate state).
+ * OPFS. The determinate progress fraction covers reading + unzipping the file;
+ * fraction 1 means everything after (waiting on the engine, registration, SQL
+ * ingest) is running, for which the caller shows an indeterminate state.
  */
 export async function ingestZip(
 	file: File,
 	onProgress?: (fraction: number) => void,
 ): Promise<void> {
+	// Start the engine boot now so it overlaps the file read + unzip below
+	// rather than stalling the progress bar afterwards. On a warm engine this
+	// promise is already settled; on a cold one this is the long pole, so we
+	// hand the user over to the indeterminate "importing" state before awaiting.
+	const dbReady = getDB();
+
 	const data = new Uint8Array(await file.arrayBuffer());
-	onProgress?.(0.1);
+	onProgress?.(0.2);
 
 	const extracted = await new Promise<Unzipped>((resolve, reject) => {
 		unzip(
@@ -87,17 +101,18 @@ export async function ingestZip(
 			"archive contains no Streaming_History_Audio_*.json files; make sure it's the my_spotify_data.zip with the Spotify Extended Streaming History folder",
 		);
 	}
-	onProgress?.(0.5);
+	// Reading + unzipping is done; everything left is gated on the engine and
+	// SQL, which have no granular progress. Flip the caller to its indeterminate
+	// "importing" state instead of freezing a determinate bar while we wait.
+	onProgress?.(1);
 
-	const db = await getDB();
+	const db = await dbReady;
 	const registered: string[] = [];
 	for (const [name, bytes] of entries) {
 		const base = basename(name);
 		await db.registerFileBuffer(base, bytes);
 		registered.push(base);
-		onProgress?.(0.5 + 0.5 * (registered.length / entries.length));
 	}
-	onProgress?.(1);
 
 	try {
 		await rebuildPlays(registered, currentTz());
@@ -106,6 +121,7 @@ export async function ingestZip(
 			await db.dropFile(base).catch(() => {});
 		}
 	}
+	playsLoaded = true;
 	await snapshotToOPFS();
 }
 
@@ -142,4 +158,5 @@ export async function clearDatabase(): Promise<void> {
 	await query("DROP VIEW IF EXISTS listens");
 	await query("DROP TABLE IF EXISTS plays");
 	await deleteSnapshot();
+	playsLoaded = false;
 }

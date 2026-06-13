@@ -7,11 +7,12 @@ import "./ui/theme.css";
 import { getConn } from "./db/duckdb";
 import { router } from "./routes.tsx";
 
-// Kick off the DuckDB-WASM boot (worker + wasm instantiate + icu load) at the
-// earliest point so it overlaps React mount and the first paint instead of
-// starting only when App fires its status query. getConn is memoized, so the
-// later query() calls await this same in-flight promise. Errors here surface
-// through that query; swallow the unhandled rejection.
+// Warm the DuckDB-WASM engine (worker + wasm instantiate + icu load) in the
+// background. This no longer gates the UI: ensureReady decides readiness from
+// the OPFS snapshot alone, so a first-time visitor reaches the upload screen
+// without waiting on the engine. Warming here means the engine is usually ready
+// by the time they drop a zip; if it isn't, ingestZip awaits this same memoized
+// promise. Errors surface through the status query; swallow the rejection.
 void getConn().catch(() => {});
 
 const queryClient = new QueryClient({
