@@ -104,6 +104,28 @@ export const footnote = style({
 	color: vars.color.muted,
 });
 
+// Closing call-to-action: a pill button that leaves the story for the Summary.
+export const cta = style({
+	display: "inline-flex",
+	alignItems: "center",
+	gap: vars.space.sm,
+	marginTop: vars.space.xl,
+	padding: "0.7rem 1.4rem",
+	borderRadius: vars.radius.pill,
+	background: vars.color.accent,
+	color: "#06130b",
+	fontSize: vars.font.md,
+	fontWeight: 700,
+	textDecoration: "none",
+	transition: "background-color 150ms, transform 150ms",
+	selectors: {
+		"&:hover": {
+			background: vars.color.accentHover,
+			transform: "translateY(-1px)",
+		},
+	},
+});
+
 // --- motif scaffolding ------------------------------------------------------
 
 export const motif = style({

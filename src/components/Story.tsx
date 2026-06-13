@@ -157,6 +157,24 @@ export default function Story() {
 					}
 				/>
 			)}
+
+			<Scene
+				eyebrow="That's the story"
+				glow="rgba(29,185,84,0.16)"
+				motif={<Rings />}
+				line={
+					<>
+						The numbers behind every beat are waiting for you in the{" "}
+						<span className={css.hero}>Summary</span>.
+					</>
+				}
+				foot={null}
+				action={
+					<Link to="/" className={css.cta}>
+						Go To Summary →
+					</Link>
+				}
+			/>
 		</div>
 	);
 }
@@ -307,12 +325,14 @@ function Scene({
 	motif,
 	line,
 	foot,
+	action,
 }: {
 	eyebrow: string;
 	glow: string;
 	motif: ReactNode;
 	line: ReactNode;
 	foot: ReactNode;
+	action?: ReactNode;
 }) {
 	const { ref, shown } = useReveal<HTMLElement>();
 	return (
@@ -322,7 +342,8 @@ function Scene({
 			<div className={`${css.content} ${shown ? css.revealed : ""}`}>
 				<div className={css.eyebrow}>{eyebrow}</div>
 				<p className={css.line}>{line}</p>
-				<div className={css.footnote}>{foot}</div>
+				{foot && <div className={css.footnote}>{foot}</div>}
+				{action && <div>{action}</div>}
 			</div>
 		</section>
 	);

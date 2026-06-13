@@ -2,6 +2,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { type DragEvent, useRef, useState } from "react";
 import { api } from "../api";
 import { asset } from "../asset";
+import { navigate } from "../router";
 import { Panel } from "../ui";
 import * as css from "./Import.css";
 
@@ -80,6 +81,9 @@ export default function Import({
 			// welcome variant unmounts on that flip; the reimport tab stays
 			// mounted, so settle it on an explicit done state.
 			await qc.invalidateQueries();
+			// Fresh data deserves a fresh read: always send the user to Story
+			// first, regardless of which URL the import was triggered from.
+			navigate("/story");
 			setPhase({ kind: "done" });
 		} catch (err) {
 			setPhase({
