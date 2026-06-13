@@ -117,6 +117,28 @@ export const warnText = style({
 	fontSize: vars.font.sm,
 });
 
+// Reassurance banner: the whole import runs in-browser, nothing is uploaded.
+export const privacy = style({
+	display: "flex",
+	alignItems: "flex-start",
+	gap: vars.space.md,
+	margin: 0,
+	padding: `${vars.space.lg} ${vars.space.xl}`,
+	textAlign: "left",
+	border: `1px solid ${vars.color.accentDim}`,
+	borderRadius: vars.radius.md,
+	background: "rgba(29, 185, 84, 0.08)",
+	color: vars.color.muted,
+	fontSize: vars.font.sm,
+	lineHeight: 1.5,
+});
+
+export const privacyIcon = style({
+	flexShrink: 0,
+	fontSize: vars.font.lg,
+	lineHeight: 1.4,
+});
+
 // Inline text button that swaps the welcome card for the export walkthrough.
 export const tutorialLink = style({
 	margin: 0,

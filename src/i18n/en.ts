@@ -173,6 +173,9 @@ export const en = {
 	"import.onlyZip": "Only the .zip — no need to unzip it first.",
 	"import.learnHow": "Learn how to load your data from Spotify",
 	"import.reimportWarn": "Re-importing replaces all currently loaded data.",
+	"import.privacy":
+		"Your data never leaves this device. {emph}. Everything is processed right here in your browser, and nothing is uploaded, stored, or transmitted anywhere.",
+	"import.privacyEmph": "No data is sent over the network",
 	"import.errZip": "Please drop a .zip archive.",
 	"import.errFailed": "Import failed.",
 

@@ -210,6 +210,17 @@ export default function Import({
 				<p className={css.warnText}>⚠ {t("import.reimportWarn")}</p>
 			)}
 
+			<p className={css.privacy}>
+				<span className={css.privacyIcon} aria-hidden="true">
+					🔒
+				</span>
+				<span>
+					{fillNodes(t("import.privacy"), {
+						emph: <strong>{t("import.privacyEmph")}</strong>,
+					})}
+				</span>
+			</p>
+
 			<input
 				ref={inputRef}
 				type="file"

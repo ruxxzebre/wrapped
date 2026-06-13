@@ -169,6 +169,9 @@ export const ro: Translation = {
 	"import.learnHow": "Află cum să-ți încarci datele de la Spotify",
 	"import.reimportWarn":
 		"Reimportarea înlocuiește toate datele încărcate acum.",
+	"import.privacy":
+		"Datele tale nu părăsesc niciodată acest dispozitiv. {emph}. Totul este procesat chiar aici, în browserul tău, și nimic nu este încărcat, stocat sau transmis nicăieri.",
+	"import.privacyEmph": "Niciun fel de date nu sunt trimise prin rețea",
 	"import.errZip": "Te rog trage o arhivă .zip.",
 	"import.errFailed": "Importul a eșuat.",
 
