@@ -6,6 +6,7 @@ import {
 	redirect,
 } from "@tanstack/react-router";
 import App from "./App";
+import Story from "./components/Story";
 import { TABS } from "./tabs";
 import type { Tint } from "./ui/PageHeader.css";
 import ArtistDetail from "./views/ArtistDetail";
@@ -21,6 +22,8 @@ declare module "@tanstack/react-router" {
 		/** Tab title shown in PageHeader; absent on detail routes. */
 		title?: string;
 		tint?: Tint;
+		/** Bare tabs render full-bleed: no PageHeader, content wrapper, or footer. */
+		bare?: boolean;
 	}
 	interface Register {
 		router: typeof router;
@@ -29,14 +32,19 @@ declare module "@tanstack/react-router" {
 
 const rootRoute = createRootRoute({ component: App });
 
-// Home tabs map 1:1 to routes. Play Log is defined separately because it
-// validates date-filter search params (Calendar day clicks deep-link into it).
-const tabRoutes = TABS.filter((t) => t.slug !== "/play-log").map((t) =>
+// Home tabs map 1:1 to routes. Play Log and Story are defined separately
+// because they validate search params (date filters / the active scene).
+const tabRoutes = TABS.filter(
+	(t) => t.slug !== "/play-log" && t.slug !== "/story",
+).map((t) =>
 	createRoute({
 		getParentRoute: () => rootRoute,
 		path: t.slug,
 		component: t.C,
-		staticData: { title: t.name, tint: t.tint },
+		// Bare tabs suppress the title so App skips the PageHeader entirely.
+		staticData: t.bare
+			? { tint: t.tint, bare: true }
+			: { title: t.name, tint: t.tint },
 	}),
 );
 
@@ -51,6 +59,21 @@ const playLogRoute = createRoute({
 		from: typeof search.from === "string" ? search.from : undefined,
 		to: typeof search.to === "string" ? search.to : undefined,
 	}),
+});
+
+export type StorySearch = { scene?: number };
+
+// The active scene rides in the URL so back-navigation from a track/artist
+// detail returns to the same beat instead of the top of the stack.
+const storyRoute = createRoute({
+	getParentRoute: () => rootRoute,
+	path: "/story",
+	component: Story,
+	staticData: { tint: "green", bare: true },
+	validateSearch: (search: Record<string, unknown>): StorySearch => {
+		const n = Number(search.scene);
+		return Number.isInteger(n) && n > 0 ? { scene: n } : {};
+	},
 });
 
 const trackRoute = createRoute({
@@ -92,6 +115,7 @@ const catchAllRoute = createRoute({
 const routeTree = rootRoute.addChildren([
 	...tabRoutes,
 	playLogRoute,
+	storyRoute,
 	trackRoute,
 	artistRoute,
 	yearRoute,

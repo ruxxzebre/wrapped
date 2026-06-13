@@ -1,4 +1,4 @@
-import { ensureReady, ingestZip } from "./db/lifecycle";
+import { clearDatabase, ensureReady, ingestZip } from "./db/lifecycle";
 import * as q from "./db/queries";
 
 // The data façade every view talks to. Until the DuckDB-WASM migration this
@@ -123,6 +123,50 @@ export type OnThisDay = {
 	hours: number;
 };
 
+// --- Story: the narrative "story stack" at the top of the summary page ------
+
+export type StoryOrigin = {
+	date: string; // YYYY-MM-DD, local
+	weekday: string; // "Tuesday"
+	track_uri: string;
+	name: string;
+	artist: string;
+};
+
+export type StoryPersona = {
+	night_ratio: number; // share of plays in the 21:00–05:00 window (local)
+	skip_ratio: number;
+	total_artists: number;
+	oneshot_artists: number; // artists played exactly once
+	loyal_artists: number; // artists with ≥50 plays
+};
+
+export type StoryObsession = {
+	date: string;
+	track_uri: string;
+	name: string;
+	artist: string;
+	plays: number; // plays of this one track on this one day
+};
+
+export type StoryFaded = {
+	track_uri: string;
+	name: string;
+	artist: string;
+	plays: number; // plays in its peak year
+	peak_year: number;
+	last_play: string;
+};
+
+// Every beat but the persona may be null when the library is too thin to
+// support it; the view simply omits that scene.
+export type Story = {
+	origin: StoryOrigin | null;
+	persona: StoryPersona | null;
+	obsession: StoryObsession | null;
+	faded: StoryFaded | null;
+};
+
 export type RankDelta = { rank: number; prev_rank: number | null };
 
 export type YearTrackDelta = RankDelta & {
@@ -159,8 +203,10 @@ export const api = {
 	status: () => ensureReady(),
 	importZip: (file: File, onProgress?: (fraction: number) => void) =>
 		ingestZip(file, onProgress),
+	clearDatabase: () => clearDatabase(),
 
 	summary: () => q.summary(),
+	story: () => q.story(),
 
 	topTracks: (metric: Metric, w: Window, minMs: number, limit: number) =>
 		q.topTracks(metric, w, minMs, limit),

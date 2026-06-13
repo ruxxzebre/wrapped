@@ -15,6 +15,7 @@ export const backdrop = style({
 export const modal = style({
 	width: "min(640px, 92vw)",
 	background: vars.color.panelHover,
+	padding: "1em",
 	border: "none",
 	borderRadius: vars.radius.lg,
 	overflow: "hidden",

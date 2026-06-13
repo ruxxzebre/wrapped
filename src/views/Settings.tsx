@@ -1,8 +1,9 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
+import { api } from "../api";
 import { recreateListensView } from "../db/lifecycle";
 import { setSetting, useSetting } from "../settings";
-import { Muted, Panel, Select, Stack } from "../ui";
+import { Button, Modal, Muted, Panel, Select, Stack } from "../ui";
 import * as css from "./Settings.css";
 
 const TIMEZONES = Intl.supportedValuesOf("timeZone");
@@ -12,6 +13,8 @@ export default function Settings() {
 	const timezone = useSetting("timezone");
 	const qc = useQueryClient();
 	const [tzBusy, setTzBusy] = useState(false);
+	const [confirmClear, setConfirmClear] = useState(false);
+	const [clearBusy, setClearBusy] = useState(false);
 
 	// The browser default can be an alias missing from supportedValuesOf.
 	const tzOptions = TIMEZONES.includes(timezone)
@@ -29,6 +32,19 @@ export default function Settings() {
 			await qc.invalidateQueries();
 		} finally {
 			setTzBusy(false);
+		}
+	}
+
+	async function clearLibrary() {
+		setClearBusy(true);
+		try {
+			await api.clearDatabase();
+			// status is now not-ready, so App swaps back to the welcome screen;
+			// drop every cached aggregate so nothing stale lingers behind it.
+			await qc.invalidateQueries();
+		} finally {
+			setClearBusy(false);
+			setConfirmClear(false);
 		}
 	}
 
@@ -75,6 +91,52 @@ export default function Settings() {
 					</span>
 				</label>
 			</Panel>
+			<Panel title="Danger zone">
+				<div className={css.dangerRow}>
+					<Button
+						variant="danger"
+						disabled={clearBusy}
+						onClick={() => setConfirmClear(true)}
+					>
+						Clear library
+					</Button>
+					<span className={css.label}>
+						Delete imported data
+						<Muted>
+							Wipes the database and its saved snapshot, returning you to the
+							welcome screen. This can't be undone — you'll need to re-import
+							your Spotify export.
+						</Muted>
+					</span>
+				</div>
+			</Panel>
+			{confirmClear && (
+				<Modal onClose={() => !clearBusy && setConfirmClear(false)}>
+					<Stack>
+						<strong>Clear your library?</strong>
+						<Muted>
+							This permanently deletes all imported listening data from this
+							browser. You can re-import your Spotify export afterwards.
+						</Muted>
+						<div className={css.modalActions}>
+							<Button
+								variant="chrome"
+								disabled={clearBusy}
+								onClick={() => setConfirmClear(false)}
+							>
+								Cancel
+							</Button>
+							<Button
+								variant="danger"
+								disabled={clearBusy}
+								onClick={() => void clearLibrary()}
+							>
+								{clearBusy ? "Clearing…" : "Clear library"}
+							</Button>
+						</div>
+					</Stack>
+				</Modal>
+			)}
 		</Stack>
 	);
 }

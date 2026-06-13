@@ -46,6 +46,27 @@ export const variant = styleVariants({
 			},
 		},
 	],
+	// Destructive action (e.g. clearing the library).
+	danger: [
+		base,
+		{
+			background: "#e22134",
+			border: "none",
+			color: "#fff",
+			borderRadius: vars.radius.pill,
+			padding: "0.5rem 0.9rem",
+			fontSize: vars.font.md,
+			fontWeight: 600,
+			display: "inline-flex",
+			alignItems: "center",
+			gap: "0.45rem",
+			transition: "background-color 150ms, opacity 150ms",
+			selectors: {
+				"&:hover": { background: "#c11526" },
+				"&:disabled": { opacity: 0.6, cursor: "default" },
+			},
+		},
+	],
 	// Bare textual button (e.g. "← back").
 	link: [
 		base,

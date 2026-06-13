@@ -2,7 +2,7 @@ import type { ButtonHTMLAttributes } from "react";
 import * as css from "./Button.css";
 
 type Props = ButtonHTMLAttributes<HTMLButtonElement> & {
-	variant?: "nav" | "chrome" | "link";
+	variant?: "nav" | "chrome" | "link" | "danger";
 	/** Highlighted state for the nav variant. */
 	active?: boolean;
 };

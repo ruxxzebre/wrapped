@@ -18,6 +18,9 @@ export default function App() {
 	const leaf = matches[matches.length - 1];
 	const title = leaf?.staticData.title;
 	const tint = leaf?.staticData.tint ?? "neutral";
+	// Bare tabs (Story) own the scroll pane for full-screen scroll-snap, so we
+	// drop the content wrapper and footer and let the body scroll itself.
+	const bare = leaf?.staticData.bare ?? false;
 
 	// Gate the whole app on whether any history has been ingested. Until it has,
 	// the data endpoints would each error, so we show the import screen instead.
@@ -109,39 +112,45 @@ export default function App() {
 					onClick={() => setNavOpen(false)}
 				/>
 			)}
-			<main ref={mainRef} className={css.main}>
+			<main ref={mainRef} className={bare ? css.mainBare : css.main}>
 				{title && <PageHeader title={title} tint={tint} />}
-				<div className={css.content}>
+				{bare ? (
 					<Outlet />
-				</div>
-				<footer className={css.footer}>
-					<p className={css.footerAbout}>
-						<strong>Wrapped</strong> — a self-hosted analyzer for your Spotify
-						listening history. Import your extended streaming export to explore
-						trends, top tracks and artists, and your taste over time. All data
-						stays on your machine.
-					</p>
-					<p>
-						Built by{" "}
-						<a
-							className={css.footerLink}
-							href="https://github.com/ruxxzebre"
-							target="_blank"
-							rel="noopener noreferrer"
-						>
-							ruxxzebre
-						</a>{" "}
-						·{" "}
-						<a
-							className={css.footerLink}
-							href="https://github.com/ruxxzebre/wrapped"
-							target="_blank"
-							rel="noopener noreferrer"
-						>
-							GitHub
-						</a>
-					</p>
-				</footer>
+				) : (
+					<>
+						<div className={css.content}>
+							<Outlet />
+						</div>
+						<footer className={css.footer}>
+							<p className={css.footerAbout}>
+								<strong>Wrapped</strong> — a self-hosted analyzer for your
+								Spotify listening history. Import your extended streaming export
+								to explore trends, top tracks and artists, and your taste over
+								time. All data stays on your machine.
+							</p>
+							<p>
+								Built by{" "}
+								<a
+									className={css.footerLink}
+									href="https://github.com/ruxxzebre"
+									target="_blank"
+									rel="noopener noreferrer"
+								>
+									ruxxzebre
+								</a>{" "}
+								·{" "}
+								<a
+									className={css.footerLink}
+									href="https://github.com/ruxxzebre/wrapped"
+									target="_blank"
+									rel="noopener noreferrer"
+								>
+									GitHub
+								</a>
+							</p>
+						</footer>
+					</>
+				)}
 			</main>
 			{paletteOpen && <CommandPalette onClose={() => setPaletteOpen(false)} />}
 		</div>

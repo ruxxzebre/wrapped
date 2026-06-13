@@ -31,3 +31,14 @@ export async function loadSnapshot(): Promise<Uint8Array | null> {
 		throw err;
 	}
 }
+
+/** Removes the persisted snapshot; a no-op when none exists. */
+export async function deleteSnapshot(): Promise<void> {
+	const dir = await navigator.storage.getDirectory();
+	try {
+		await dir.removeEntry(SNAPSHOT_NAME);
+	} catch (err) {
+		if (err instanceof DOMException && err.name === "NotFoundError") return;
+		throw err;
+	}
+}

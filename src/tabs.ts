@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import Story from "./components/Story";
 import type { Tint } from "./ui/PageHeader.css";
 import Calendar from "./views/Calendar";
 import Compare from "./views/Compare";
@@ -19,8 +20,12 @@ export const TABS: {
 	slug: string;
 	tint: Tint;
 	C: () => ReactNode;
+	// `bare` tabs own the whole pane: no PageHeader, content wrapper, or footer.
+	// Used by the full-screen scroll-snap Story.
+	bare?: boolean;
 }[] = [
 	{ name: "Summary", slug: "/", tint: "green", C: Summary },
+	{ name: "Story", slug: "/story", tint: "green", C: Story, bare: true },
 	{ name: "Top Tracks", slug: "/top-tracks", tint: "neutral", C: TopTracks },
 	{ name: "Top Artists", slug: "/top-artists", tint: "neutral", C: TopArtists },
 	{ name: "Patterns", slug: "/patterns", tint: "neutral", C: Patterns },

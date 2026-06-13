@@ -37,14 +37,14 @@ jobs:
 
       - name: Publish build branch
         run: |
-          mv dist "$RUNNER_TEMP/docs"
+          mv dist "$RUNNER_TEMP/dist"
 
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git checkout --orphan build-deployment
           git rm -rf .
 
-          mv "$RUNNER_TEMP/docs" docs
-          git add -f docs
+          mv "$RUNNER_TEMP/dist"/* .
+          git add -A
           git commit -m "Build ${GITHUB_SHA}"
           git push --force origin HEAD:build

@@ -121,6 +121,16 @@ export const main = style({
 	containerType: "inline-size",
 });
 
+// Bare pane (Story): no inner scroll here — the view is a full-height
+// scroll-snap container that scrolls itself. Hide overflow so only it moves.
+export const mainBare = style({
+	flex: 1,
+	minWidth: 0,
+	overflow: "hidden",
+	background: vars.color.bg,
+	containerType: "inline-size",
+});
+
 export const content = style({
 	maxWidth: "1400px",
 	margin: "0 auto",

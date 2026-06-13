@@ -24,3 +24,16 @@ export const label = style({
 	fontSize: vars.font.base,
 	color: vars.color.text,
 });
+
+export const dangerRow = style({
+	display: "flex",
+	alignItems: "flex-start",
+	gap: vars.space.md,
+});
+
+export const modalActions = style({
+	display: "flex",
+	justifyContent: "flex-end",
+	gap: vars.space.sm,
+	marginTop: vars.space.md,
+});

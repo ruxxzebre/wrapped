@@ -9,6 +9,11 @@ import type {
 	OnThisDay,
 	PlayRow,
 	PlaysPage,
+	Story,
+	StoryFaded,
+	StoryObsession,
+	StoryOrigin,
+	StoryPersona,
 	Summary,
 	TopArtist,
 	TopTrack,
@@ -104,6 +109,117 @@ export async function summary(): Promise<Summary> {
 		       CAST(round(sum(ms_played) / 3600000.0) AS BIGINT) AS hours
 		FROM plays GROUP BY year ORDER BY year`);
 	return { ...head, years };
+}
+
+// --- story: the narrative beats on the summary page -------------------------
+
+// The very first play in the history — the origin point. Reads on started_local
+// so the weekday/date land on the listener's own calendar.
+async function storyOrigin(): Promise<StoryOrigin | null> {
+	const rows = await query<StoryOrigin>(`
+		SELECT strftime(CAST(started_local AS DATE), '%Y-%m-%d') AS date,
+		       dayname(started_local)         AS weekday,
+		       track_uri,
+		       COALESCE(track_name, '?')      AS name,
+		       COALESCE(artist_name, '?')     AS artist
+		FROM listens ORDER BY started_local ASC LIMIT 1`);
+	return rows[0] ?? null;
+}
+
+// Habit fingerprint behind the persona line: how nocturnal, how skip-happy, and
+// how loyal vs. restless across artists. The view turns these into adjectives.
+async function storyPersona(): Promise<StoryPersona | null> {
+	const beh = (
+		await query<{ night_ratio: number | null; skip_ratio: number | null }>(`
+		SELECT avg(CASE WHEN hour(started_local) >= 21 OR hour(started_local) < 5
+		                THEN 1.0 ELSE 0.0 END) AS night_ratio,
+		       avg(CASE WHEN was_skipped THEN 1.0 ELSE 0.0 END) AS skip_ratio
+		FROM listens`)
+	)[0];
+	if (!beh || beh.night_ratio === null) return null; // empty library
+
+	const art = (
+		await query<{
+			total_artists: number;
+			oneshot_artists: number;
+			loyal_artists: number;
+		}>(`
+		WITH a AS (
+			SELECT artist_name, count(*) AS n
+			FROM listens WHERE artist_name IS NOT NULL GROUP BY artist_name
+		)
+		SELECT count(*)                        AS total_artists,
+		       count(*) FILTER (WHERE n = 1)    AS oneshot_artists,
+		       count(*) FILTER (WHERE n >= 50)  AS loyal_artists
+		FROM a`)
+	)[0];
+
+	return {
+		night_ratio: beh.night_ratio ?? 0,
+		skip_ratio: beh.skip_ratio ?? 0,
+		total_artists: art?.total_artists ?? 0,
+		oneshot_artists: art?.oneshot_artists ?? 0,
+		loyal_artists: art?.loyal_artists ?? 0,
+	};
+}
+
+// The single most-repeated track within one calendar day — the obsession record.
+// Only counts when it crosses a threshold so a sparse library doesn't surface a
+// mundane "3 plays" as a confession.
+async function storyObsession(): Promise<StoryObsession | null> {
+	const rows = await query<StoryObsession>(`
+		SELECT strftime(CAST(started_local AS DATE), '%Y-%m-%d') AS date,
+		       track_uri,
+		       COALESCE(max(track_name), '?')  AS name,
+		       COALESCE(max(artist_name), '?') AS artist,
+		       count(*)                        AS plays
+		FROM listens
+		GROUP BY date, track_uri
+		HAVING count(*) >= 8
+		ORDER BY plays DESC LIMIT 1`);
+	return rows[0] ?? null;
+}
+
+// A track you once leaned on hard and then let go: a clear peak year, but
+// untouched for at least a year before your latest listening. Picks the biggest
+// such peak so the "you left this behind" hits hardest.
+async function storyFaded(): Promise<StoryFaded | null> {
+	const rows = await query<StoryFaded>(`
+		WITH per_year AS (
+			SELECT track_uri, year(started_local) AS y, count(*) AS plays
+			FROM listens GROUP BY track_uri, y
+		),
+		peak AS (
+			SELECT track_uri, y AS peak_year, plays AS peak_plays,
+			       ROW_NUMBER() OVER (PARTITION BY track_uri ORDER BY plays DESC) AS rn
+			FROM per_year
+		),
+		life AS (
+			SELECT track_uri, max(ts) AS last_play,
+			       COALESCE(max(track_name), '?')  AS name,
+			       COALESCE(max(artist_name), '?') AS artist
+			FROM listens GROUP BY track_uri
+		)
+		SELECT l.track_uri, l.name, l.artist,
+		       p.peak_plays                       AS plays,
+		       p.peak_year                        AS peak_year,
+		       strftime(l.last_play, '%Y-%m-%d')  AS last_play
+		FROM peak p JOIN life l USING (track_uri)
+		WHERE p.rn = 1
+		  AND p.peak_plays >= 15
+		  AND l.last_play < (SELECT max(ts) FROM listens) - INTERVAL '1 year'
+		ORDER BY p.peak_plays DESC LIMIT 1`);
+	return rows[0] ?? null;
+}
+
+export async function story(): Promise<Story> {
+	const [origin, persona, obsession, faded] = await Promise.all([
+		storyOrigin(),
+		storyPersona(),
+		storyObsession(),
+		storyFaded(),
+	]);
+	return { origin, persona, obsession, faded };
 }
 
 // --- top.go -----------------------------------------------------------------

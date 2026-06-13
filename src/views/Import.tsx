@@ -17,6 +17,30 @@ function isZip(file: File) {
 	);
 }
 
+// Walkthrough for requesting and downloading the Spotify export, shown on the
+// welcome gate when a first-timer doesn't yet have their my_spotify_data.zip.
+const STEPS: { img?: string; title: string; text: string }[] = [
+	{
+		img: "/steps/step_1.png",
+		title: "Find your account",
+		text: "Go to spotify.com, log in, then open the Account menu in the top-right.",
+	},
+	{
+		img: "/steps/step_2.png",
+		title: "Open Account privacy",
+		text: "In the account settings sidebar, scroll to the Account privacy section.",
+	},
+	{
+		img: "/steps/step_3.png",
+		title: "Request your data",
+		text: "Under “Download your data”, locate Extended streaming history and tick it, untick Account data, then hit Request data.",
+	},
+	{
+		title: "Wait for the email",
+		text: "Spotify emails a confirmation link — click it to start the export. After a while (often a few days) they send a download link. Grab the my_spotify_data.zip and drop it here — no need to unzip.",
+	},
+];
+
 /**
  * Drag-and-drop importer for a Spotify my_spotify_data.zip export. Used both as
  * the full-screen welcome gate (variant "welcome") shown when no data exists,
@@ -33,6 +57,7 @@ export default function Import({
 	const inputRef = useRef<HTMLInputElement>(null);
 	const [phase, setPhase] = useState<Phase>({ kind: "idle" });
 	const [dragging, setDragging] = useState(false);
+	const [showTutorial, setShowTutorial] = useState(false);
 
 	const busy = phase.kind === "uploading" || phase.kind === "ingesting";
 
@@ -71,6 +96,40 @@ export default function Import({
 		if (file) void importFile(file);
 	}
 
+	const tutorial = (
+		<div className={css.card}>
+			<h1 className={css.heading}>Get your Spotify data</h1>
+			<ol className={css.steps}>
+				{STEPS.map((step, i) => (
+					<li key={step.title} className={css.step}>
+						{step.img && (
+							<img
+								className={css.stepImg}
+								src={step.img}
+								alt={`Step ${i + 1}: ${step.title}`}
+								loading="lazy"
+							/>
+						)}
+						<div className={css.stepBody}>
+							<h2 className={css.stepTitle}>
+								<span className={css.stepNum}>{i + 1}</span>
+								{step.title}
+							</h2>
+							<p className={css.stepText}>{step.text}</p>
+						</div>
+					</li>
+				))}
+			</ol>
+			<button
+				type="button"
+				className={css.backLink}
+				onClick={() => setShowTutorial(false)}
+			>
+				← Back to upload
+			</button>
+		</div>
+	);
+
 	const body = (
 		<div className={css.card}>
 			{variant === "welcome" ? (
@@ -78,8 +137,7 @@ export default function Import({
 					<h1 className={css.heading}>Welcome to Wrapped</h1>
 					<p className={css.lede}>
 						No listening history yet. Drop your{" "}
-						<strong>my_spotify_data.zip</strong> below to get started — the one
-						with the “Spotify Extended Streaming History” folder.
+						<strong>my_spotify_data.zip</strong> below to get started
 					</p>
 				</>
 			) : (
@@ -147,6 +205,16 @@ export default function Import({
 			{phase.kind === "error" && (
 				<p className={css.errorText}>{phase.message}</p>
 			)}
+			{variant === "welcome" && (
+				<button
+					type="button"
+					className={css.tutorialLink}
+					onClick={() => setShowTutorial(true)}
+				>
+					Learn how to load your data from Spotify
+				</button>
+			)}
+
 			{variant === "reimport" && phase.kind === "idle" && (
 				<p className={css.warnText}>
 					⚠ Re-importing replaces all currently loaded data.
@@ -167,6 +235,7 @@ export default function Import({
 		</div>
 	);
 
-	if (variant === "welcome") return <div className={css.welcome}>{body}</div>;
+	if (variant === "welcome")
+		return <div className={css.welcome}>{showTutorial ? tutorial : body}</div>;
 	return <Panel>{body}</Panel>;
 }
