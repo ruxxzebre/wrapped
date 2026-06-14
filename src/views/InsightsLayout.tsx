@@ -20,6 +20,7 @@ export default function InsightsLayout() {
 					<Link
 						key={tab.slug}
 						to={tab.slug}
+						preload="viewport"
 						className={buttonCss.variant.nav}
 						activeProps={{ className: buttonCss.navActive }}
 						activeOptions={{ exact: true, includeSearch: false }}

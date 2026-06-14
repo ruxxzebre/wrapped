@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { getRouteApi } from "@tanstack/react-router";
 import { useMemo } from "react";
 import type { AlbumRow, TrackRow } from "../api";
 import { fmtDate, fmtHours, fmtInt, fmtPct } from "../format";
@@ -72,8 +73,11 @@ const trackColumns = (t: TFunction): Column<TrackRow>[] => [
 	},
 ];
 
-export default function ArtistDetail({ name }: { name: string }) {
+const route = getRouteApi("/artist/$name");
+
+export default function ArtistDetail() {
 	const t = useT();
+	const { name } = route.useParams();
 	const detail = useQuery(q.artist(name));
 	const tracks = useQuery(q.artistTracks(name));
 

@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { Link } from "@tanstack/react-router";
+import { getRouteApi, Link } from "@tanstack/react-router";
 import type { YearArtistDelta, YearTrackDelta } from "../api";
 import { fmtDate, fmtHours, fmtInt, fmtPct } from "../format";
 import { type TFunction, useT } from "../i18n";
@@ -85,8 +85,11 @@ const artistColumns = (t: TFunction): Column<YearArtistDelta>[] => [
 	},
 ];
 
-export default function YearReview({ year }: { year: number }) {
+const route = getRouteApi("/year/$year");
+
+export default function YearReview() {
 	const t = useT();
+	const year = Number(route.useParams().year);
 	const { data: summary } = useQuery(q.summary());
 	const years = (summary?.years ?? []).map((y) => y.year).sort((a, b) => a - b);
 	const prev = years.filter((y) => y < year).at(-1);
@@ -209,6 +212,7 @@ function YearLink({ year, dir }: { year: number; dir: "prev" | "next" }) {
 		<Link
 			to="/year/$year"
 			params={{ year: String(year) }}
+			preload="viewport"
 			className={linkCss.entity}
 		>
 			{dir === "prev" ? `← ${year}` : `${year} →`}

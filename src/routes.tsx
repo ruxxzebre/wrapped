@@ -4,30 +4,39 @@ import {
 	createRootRouteWithContext,
 	createRoute,
 	createRouter,
+	lazyRouteComponent,
 	redirect,
 } from "@tanstack/react-router";
 import App from "./App";
 import type { Window } from "./api";
-import Story from "./components/Story";
 import type { TKey } from "./i18n";
 import { q } from "./queries";
 import { queryClient } from "./queryClient";
+// Eager: App shell, the home/index view, the import screen (App renders it
+// directly for the first-run gate) and the tiny Insights layout. Every other
+// view is split into its own chunk via lazyRouteComponent so the initial bundle
+// stays small; the router preloads those chunks on intent, so they never blink.
+import { PendingView } from "./ui";
 import type { Tint } from "./ui/PageHeader.css";
-import ArtistDetail from "./views/ArtistDetail";
-import Calendar from "./views/Calendar";
-import Compare from "./views/Compare";
 import Import from "./views/Import";
-import InsightsDashboard from "./views/InsightsDashboard";
 import InsightsLayout from "./views/InsightsLayout";
-import Library from "./views/Library";
-import Patterns from "./views/Patterns";
-import PlayLog from "./views/PlayLog";
-import Settings from "./views/Settings";
 import Summary from "./views/Summary";
-import TopArtists from "./views/TopArtists";
-import TopTracks from "./views/TopTracks";
-import TrackDetail from "./views/TrackDetail";
-import YearReview from "./views/YearReview";
+
+const Story = lazyRouteComponent(() => import("./components/Story"));
+const TopTracks = lazyRouteComponent(() => import("./views/TopTracks"));
+const TopArtists = lazyRouteComponent(() => import("./views/TopArtists"));
+const Library = lazyRouteComponent(() => import("./views/Library"));
+const Patterns = lazyRouteComponent(() => import("./views/Patterns"));
+const Calendar = lazyRouteComponent(() => import("./views/Calendar"));
+const PlayLog = lazyRouteComponent(() => import("./views/PlayLog"));
+const Compare = lazyRouteComponent(() => import("./views/Compare"));
+const Settings = lazyRouteComponent(() => import("./views/Settings"));
+const InsightsDashboard = lazyRouteComponent(
+	() => import("./views/InsightsDashboard"),
+);
+const TrackDetail = lazyRouteComponent(() => import("./views/TrackDetail"));
+const ArtistDetail = lazyRouteComponent(() => import("./views/ArtistDetail"));
+const YearReview = lazyRouteComponent(() => import("./views/YearReview"));
 
 // Code-based route tree over hash history. Hash URLs (#/track/...) need zero
 // server fallback config.
@@ -233,23 +242,19 @@ const settingsRoute = createRoute({
 });
 
 // --- Detail routes (no PageHeader) ---------------------------------------
+// The views read their own params via getRouteApi, so the route just points at
+// the lazy component.
 const trackRoute = createRoute({
 	getParentRoute: () => rootRoute,
 	path: "/track/$uri",
-	component: function TrackRoute() {
-		const { uri } = trackRoute.useParams();
-		return <TrackDetail uri={uri} />;
-	},
+	component: TrackDetail,
 	loader: ({ context: { queryClient }, params: { uri } }) =>
 		prefetch(queryClient, (qc) => qc.ensureQueryData(q.track(uri))),
 });
 const artistRoute = createRoute({
 	getParentRoute: () => rootRoute,
 	path: "/artist/$name",
-	component: function ArtistRoute() {
-		const { name } = artistRoute.useParams();
-		return <ArtistDetail name={name} />;
-	},
+	component: ArtistDetail,
 	loader: ({ context: { queryClient }, params: { name } }) =>
 		prefetch(queryClient, (qc) =>
 			Promise.all([
@@ -261,10 +266,7 @@ const artistRoute = createRoute({
 const yearRoute = createRoute({
 	getParentRoute: () => rootRoute,
 	path: "/year/$year",
-	component: function YearRoute() {
-		const { year } = yearRoute.useParams();
-		return <YearReview year={Number(year)} />;
-	},
+	component: YearReview,
 	loader: ({ context: { queryClient }, params: { year } }) =>
 		prefetch(queryClient, (qc) =>
 			Promise.all([
@@ -309,4 +311,20 @@ export const router = createRouter({
 	// Defer all caching to React Query (staleTime: Infinity); the loader is then a
 	// cheap cache-hit on real navigation rather than a second router-level cache.
 	defaultPreloadStaleTime: 0,
+	// Shown while a route's lazy chunk (and loader) resolves — without it the
+	// Outlet suspends with no fallback and the boot-splash → view handoff flashes
+	// a black gap. pendingMs: 0 shows it immediately so there's never a blank
+	// frame; minMs: 0 lets it vanish the instant the view is ready (no forced
+	// dwell that would read as slow on warm, preloaded navigations).
+	defaultPendingComponent: PendingView,
+	defaultPendingMs: 0,
+	defaultPendingMinMs: 0,
+	// Cross-fade between routes instead of a hard cut (no-op where unsupported).
+	defaultViewTransition: false,
+	// Remember scroll position per route. The body never scrolls — the main pane
+	// does — so the window reset isn't enough; scrollToTopSelectors resets that
+	// custom container to the top on forward navigation, while back/forward
+	// restores the saved position. The pane carries data-scroll-restoration-id.
+	scrollRestoration: true,
+	scrollToTopSelectors: ['[data-scroll-restoration-id="main"]'],
 });

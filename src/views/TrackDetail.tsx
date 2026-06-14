@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { getRouteApi } from "@tanstack/react-router";
 import { fmtDate, fmtDuration, fmtHours, fmtInt, fmtPct } from "../format";
 import { tEnum, useT } from "../i18n";
 import { ArtistLink, BackLink, SpotifyEmbed, SpotifyLink } from "../links";
@@ -6,8 +7,11 @@ import { q } from "../queries";
 import { DetailHead, Grid2, Muted, Panel, Status } from "../ui";
 import { Breakdown, Cards, HourBars, MonthlyChart } from "../widgets";
 
-export default function TrackDetail({ uri }: { uri: string }) {
+const route = getRouteApi("/track/$uri");
+
+export default function TrackDetail() {
 	const t = useT();
+	const { uri } = route.useParams();
 	const { data, error } = useQuery(q.track(uri));
 	if (!data) return <Status error={error} />;
 

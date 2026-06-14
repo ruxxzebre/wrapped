@@ -5,7 +5,7 @@ import {
 	useMatches,
 	useRouterState,
 } from "@tanstack/react-router";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import * as css from "./App.css";
 import CommandPalette from "./components/CommandPalette";
 import { useLang, useT } from "./i18n";
@@ -14,6 +14,25 @@ import { leafActive, NAV } from "./tabs";
 import { Button, PageHeader, Splash } from "./ui";
 import * as buttonCss from "./ui/Button.css";
 import Import from "./views/Import";
+
+// Thin top-of-viewport bar shown only while a route loader (or transition) is in
+// flight — feedback on a cold navigation without a full-page spinner. Warm
+// (preloaded) navigations resolve instantly, so it never flashes for those.
+function RouteProgress() {
+	const active = useRouterState({
+		select: (s) => s.isLoading || s.isTransitioning,
+	});
+	return (
+		<div
+			className={
+				active
+					? `${css.routeProgress} ${css.routeProgressActive}`
+					: css.routeProgress
+			}
+			aria-hidden="true"
+		/>
+	);
+}
 
 export default function App() {
 	const t = useT();
@@ -47,12 +66,10 @@ export default function App() {
 				init.add(g.headerKey);
 		return init;
 	});
-	const mainRef = useRef<HTMLElement>(null);
 
-	// The body never scrolls; the main pane does. A route change resets scroll,
-	// dismisses the mobile drawer, and auto-expands the active group.
+	// A route change dismisses the mobile drawer and auto-expands the active
+	// group. Scroll reset/restore is handled by the router (scrollRestoration).
 	useEffect(() => {
-		mainRef.current?.scrollTo(0, 0);
 		setNavOpen(false);
 		setOpenGroups((prev) => {
 			const next = new Set(prev);
@@ -100,6 +117,7 @@ export default function App() {
 
 	return (
 		<div className={css.shell}>
+			<RouteProgress />
 			<div className={css.menuBar}>
 				<button
 					type="button"
@@ -179,7 +197,10 @@ export default function App() {
 					onClick={() => setNavOpen(false)}
 				/>
 			)}
-			<main ref={mainRef} className={bare ? css.mainBare : css.main}>
+			<main
+				data-scroll-restoration-id="main"
+				className={bare ? css.mainBare : css.main}
+			>
 				{title && <PageHeader title={title} tint={tint} />}
 				{bare ? (
 					<Outlet />

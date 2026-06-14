@@ -1,7 +1,38 @@
-import { style } from "@vanilla-extract/css";
+import { keyframes, style } from "@vanilla-extract/css";
 import { contentPad, vars } from "./ui/theme.css";
 
 const mobile = "screen and (max-width: 768px)";
+
+// Indeterminate top progress bar: a highlight sweeps left→right while a route
+// loader is in flight. Shown only on cold navigations (warm ones resolve before
+// the transition starts), so it reads as "working" rather than a constant chrome.
+const progressSweep = keyframes({
+	"0%": { backgroundPosition: "-40% 0" },
+	"100%": { backgroundPosition: "140% 0" },
+});
+
+export const routeProgress = style({
+	position: "absolute",
+	top: 0,
+	left: 0,
+	right: 0,
+	height: 2,
+	zIndex: 1000,
+	opacity: 0,
+	transition: "opacity 150ms ease",
+	pointerEvents: "none",
+});
+
+export const routeProgressActive = style({
+	opacity: 1,
+	background: `linear-gradient(90deg, transparent, ${vars.color.accent}, transparent)`,
+	backgroundSize: "40% 100%",
+	backgroundRepeat: "no-repeat",
+	animationName: progressSweep,
+	animationDuration: "0.9s",
+	animationIterationCount: "infinite",
+	animationTimingFunction: "ease-in-out",
+});
 
 export const shell = style({
 	vars: { [contentPad]: "1.5rem" },

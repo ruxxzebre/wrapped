@@ -5,11 +5,6 @@ const spin = keyframes({
 	to: { transform: "rotate(360deg)" },
 });
 
-const fadeIn = keyframes({
-	from: { opacity: 0 },
-	to: { opacity: 1 },
-});
-
 export const root = style({
 	height: "100dvh",
 	display: "flex",
@@ -23,10 +18,12 @@ export const root = style({
 	textAlign: "center",
 });
 
+// No fade-in: the React splash must be pixel-identical to the static boot splash
+// inlined in index.html so the handoff from pre-React markup is seamless. Fading
+// the logo/label in from opacity 0 made them blink out and re-appear at handoff.
 export const logo = style({
 	width: "56px",
 	height: "auto",
-	animation: `${fadeIn} 300ms ease both`,
 });
 
 export const wordmark = style({
@@ -52,7 +49,6 @@ export const label = style({
 	lineHeight: 1.2,
 	minHeight: "1.2em",
 	margin: 0,
-	animation: `${fadeIn} 300ms ease both`,
 });
 
 export const error = style({

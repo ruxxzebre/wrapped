@@ -230,6 +230,7 @@ export async function topTracks(
 	minMs: number,
 	limit: number,
 ): Promise<TopTrack[]> {
+	console.log("get top tracks");
 	const conds = ["ms_played >= ?"];
 	const args: unknown[] = [minMs];
 	windowWhere(w, conds, args);

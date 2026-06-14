@@ -114,6 +114,7 @@ export default function PlayLog() {
 				rowKey={(p) => `${p.ts}-${p.track_uri}`}
 				rowHeight={34}
 				overscan={20}
+				scrollRestorationId="play-log"
 				onEndReached={() => {
 					if (query.hasNextPage && !query.isFetchingNextPage)
 						query.fetchNextPage();

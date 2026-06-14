@@ -78,3 +78,15 @@ globalStyle("*, *::before, *::after", {
 		},
 	},
 });
+
+// Route transition (router defaultViewTransition). Keep the browser's symmetric
+// crossfade (old fades out while new fades in) — it must stay symmetric because
+// the UA composites the two snapshots with mix-blend-mode: plus-lighter, so any
+// asymmetry (e.g. holding the old snapshot opaque) sums past 1.0 and "glows".
+// We only shorten the default ~250ms to a quick fade; snappiness comes from
+// preloading the routes, not from breaking the fade. Reduced-motion users get
+// the global 0.01ms override above.
+globalStyle("::view-transition-old(root), ::view-transition-new(root)", {
+	animationDuration: "110ms",
+	animationTimingFunction: "ease",
+});

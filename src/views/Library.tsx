@@ -143,6 +143,7 @@ export default function Library() {
 				rowKey={(t) => t.track_uri}
 				sort={sort}
 				onSortChange={onSortChange}
+				scrollRestorationId="library"
 			/>
 		</>
 	);

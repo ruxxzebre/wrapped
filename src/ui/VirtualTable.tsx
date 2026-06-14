@@ -1,3 +1,4 @@
+import { useElementScrollRestoration } from "@tanstack/react-router";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { type ReactNode, useEffect, useMemo, useRef } from "react";
 import type { Sort, VColumn } from "./types";
@@ -25,6 +26,7 @@ export function VirtualTable<T>({
 	onEndReached,
 	endThreshold = 30,
 	footer,
+	scrollRestorationId,
 }: {
 	rows: T[];
 	columns: VColumn<T>[];
@@ -39,13 +41,26 @@ export function VirtualTable<T>({
 	onEndReached?: () => void;
 	endThreshold?: number;
 	footer?: ReactNode;
+	/**
+	 * When set, the inner scroll offset is saved per route and restored on
+	 * back/forward — so returning from a detail page lands where you left off.
+	 * Must be unique per mounting view (e.g. "library", "play-log").
+	 */
+	scrollRestorationId?: string;
 }) {
 	const parentRef = useRef<HTMLDivElement>(null);
+	// id lookup resolves synchronously from cache, so the saved offset is ready
+	// before the virtualizer mounts; passing it as initialOffset avoids a
+	// scroll-to-top flash on restore. Empty id simply never matches (no restore).
+	const scrollEntry = useElementScrollRestoration({
+		id: scrollRestorationId ?? "",
+	});
 	const virtualizer = useVirtualizer({
 		count: rows.length,
 		getScrollElement: () => parentRef.current,
 		estimateSize: () => rowHeight,
 		overscan,
+		initialOffset: scrollEntry?.scrollY,
 	});
 
 	const gridTemplateColumns = useMemo(
@@ -69,7 +84,12 @@ export function VirtualTable<T>({
 
 	return (
 		<>
-			<div className={css.wrap} ref={parentRef} style={{ height }}>
+			<div
+				className={css.wrap}
+				ref={parentRef}
+				style={{ height }}
+				data-scroll-restoration-id={scrollRestorationId}
+			>
 				<div
 					className={`${css.row} ${css.head}`}
 					style={{ gridTemplateColumns, height: headerHeight }}

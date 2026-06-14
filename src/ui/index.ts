@@ -8,6 +8,7 @@ export { CardGrid, Grid2 } from "./Grid";
 export { Modal } from "./Modal";
 export { PageHeader } from "./PageHeader";
 export { Panel } from "./Panel";
+export { PendingView } from "./PendingView";
 export { chartColors, palette } from "./palette";
 export { Skeleton } from "./Skeleton";
 export { Splash } from "./Splash";

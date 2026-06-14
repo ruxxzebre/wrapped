@@ -1,7 +1,9 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
+import { useEffect, useRef } from "react";
 import { useT } from "./i18n";
 import * as css from "./links.css";
+import { q } from "./queries";
 import { useSetting } from "./settings";
 import { Muted } from "./ui";
 
@@ -11,12 +13,59 @@ function trackId(uri: string) {
 		: null;
 }
 
+// Prefetch a detail's data once its link has dwelled in view for a beat. The
+// router's built-in preload="viewport" fires the instant a link crosses the
+// viewport with no dwell, so scrolling a 100-row table flings hundreds of heavy
+// detail queries at the single DuckDB worker at once — saturating it, stalling
+// the click you actually make, and tripping "message handler took Nms". The
+// dwell means only rows you pause on get warmed; a fast scroll-past cancels
+// before any query is issued. Fires once, then disconnects.
+const DWELL_MS = 350;
+function useDwellPrefetch<T extends HTMLElement>(run: () => void) {
+	const runRef = useRef(run);
+	runRef.current = run;
+	const ref = useRef<T | null>(null);
+	useEffect(() => {
+		const el = ref.current;
+		if (!el || !("IntersectionObserver" in window)) return;
+		let timer: ReturnType<typeof setTimeout> | undefined;
+		const io = new IntersectionObserver((entries) => {
+			if (entries.some((e) => e.isIntersecting)) {
+				timer = setTimeout(() => {
+					runRef.current();
+					io.disconnect();
+				}, DWELL_MS);
+			} else if (timer) {
+				clearTimeout(timer);
+				timer = undefined;
+			}
+		});
+		io.observe(el);
+		return () => {
+			if (timer) clearTimeout(timer);
+			io.disconnect();
+		};
+	}, []);
+	return ref;
+}
+
 // Clickable track / artist names. Used in every table and list so any name
-// becomes a jump to its detail page.
+// becomes a jump to its detail page. Hover still preloads via the router's
+// default "intent"; the dwell hook adds an in-view warm-up on top.
 
 export function TrackLink({ uri, name }: { uri: string; name: string }) {
+	const qc = useQueryClient();
+	const ref = useDwellPrefetch<HTMLAnchorElement>(() => {
+		qc.prefetchQuery(q.track(uri));
+	});
 	return (
-		<Link to="/track/$uri" params={{ uri }} className={css.entity} title={name}>
+		<Link
+			ref={ref}
+			to="/track/$uri"
+			params={{ uri }}
+			className={css.entity}
+			title={name}
+		>
 			{name}
 		</Link>
 	);
@@ -24,9 +73,15 @@ export function TrackLink({ uri, name }: { uri: string; name: string }) {
 
 export function ArtistLink({ name, muted }: { name: string; muted?: boolean }) {
 	const t = useT();
+	const qc = useQueryClient();
+	const ref = useDwellPrefetch<HTMLAnchorElement>(() => {
+		qc.prefetchQuery(q.artist(name));
+		qc.prefetchQuery(q.artistTracks(name));
+	});
 	if (!name || name === "?") return <Muted>{name || t("common.dash")}</Muted>;
 	return (
 		<Link
+			ref={ref}
 			to="/artist/$name"
 			params={{ name }}
 			className={muted ? `${css.entity} ${css.entityMuted}` : css.entity}
@@ -83,26 +138,32 @@ export function SpotifyEmbed({ uri }: { uri: string }) {
 		},
 	});
 
-	// Hidden entirely when disabled, not a track, or the probe failed. While the
-	// probe is in flight (ok === undefined) we show a skeleton so the layout
-	// doesn't jump; it's replaced by the player on success or vanishes on
-	// failure.
+	// Hidden entirely when disabled, not a track, or the probe failed.
 	if (!enabled || !id || ok === false) return null;
-	if (ok === undefined) return <div className={css.spotifyEmbedSkeleton} />;
 
+	// Two independent loads gate this widget: the oembed probe (availability) and
+	// the iframe's own content fetch. We keep the skeleton mounted until BOTH are
+	// done — the iframe is stacked on top and fades in on its onLoad, so there's
+	// no blank-box flash between "skeleton gone" and "player painted". The probe
+	// also needs to have resolved before we mount the iframe at all (ok === true).
 	return (
-		<iframe
-			title={t("links.spotifyPlayer")}
-			data-testid="embed-iframe"
-			className={css.spotifyEmbed}
-			src={`https://open.spotify.com/embed/track/${id}`}
-			width="100%"
-			height="152"
-			frameBorder="0"
-			allowFullScreen
-			allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
-			loading="lazy"
-		/>
+		<div className={css.spotifyEmbedFrame}>
+			<div className={css.spotifyEmbedSkeleton} />
+			{ok === true && (
+				<iframe
+					title={t("links.spotifyPlayer")}
+					data-testid="embed-iframe"
+					className={css.spotifyEmbed}
+					src={`https://open.spotify.com/embed/track/${id}`}
+					width="100%"
+					height="152"
+					frameBorder="0"
+					allowFullScreen
+					allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+					onLoad={(e) => e.currentTarget.classList.add(css.spotifyEmbedLoaded)}
+				/>
+			)}
+		</div>
 	);
 }
 
