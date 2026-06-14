@@ -59,6 +59,12 @@ export async function ensureReady(): Promise<{ ready: boolean }> {
 		await query(
 			`CREATE TABLE plays AS SELECT * FROM read_parquet('${VFS_SNAPSHOT}')`,
 		);
+		// Snapshots taken before incognito_mode was ingested lack the column;
+		// add it (NULL-filled) so the listens view's SELECT * stays valid. New
+		// data lands on re-import.
+		await query(
+			"ALTER TABLE plays ADD COLUMN IF NOT EXISTS incognito_mode BOOLEAN",
+		);
 	} finally {
 		await db.dropFile(VFS_SNAPSHOT).catch(() => {});
 	}

@@ -36,8 +36,117 @@ export const en = {
 	"nav.group.explore": "Explore",
 	"nav.group.system": "System",
 	"nav.insights.overview": "Overview",
+	"nav.insights.taste": "Taste",
+	"nav.insights.habits": "Habits",
+	"nav.insights.events": "Events",
+	"nav.insights.devices": "Devices",
 	"insights.dashboardTitle": "Insights",
 	"insights.empty": "More insights are coming soon.",
+	"insights.notEnough": "Not enough data yet.",
+
+	// Overview headline cards
+	"insights.overview.lede":
+		"A deeper cut at your listening — taste shape, daily habits, notable events, and the devices behind it all. Pick a tab above.",
+	"insights.overview.gini": "taste concentration",
+	"insights.overview.longestHiatus": "longest hiatus",
+	"insights.overview.nightShare": "after-midnight plays",
+
+	// --- §24 Range index ---------------------------------------------------
+	"insights.range.title": "Range index",
+	"insights.range.lede":
+		"How much of your listening comes from a handful of tracks. 0 is perfectly even; closer to 1 means a few songs dominate.",
+	"insights.range.gini": "concentration (Gini)",
+	"insights.range.top1": "top 1% share",
+	"insights.range.byYear": "Concentration by year",
+	"insights.range.giniLine": "Gini",
+	"insights.range.top1Line": "top 1% share",
+
+	// --- §17 Loyal companions ---------------------------------------------
+	"insights.companions.title": "Loyal companions",
+	"insights.companions.lede":
+		"Played in every single year of your history — the constants that never left.",
+	"insights.companions.empty":
+		"Need at least 3 years of data to find your constants.",
+
+	// --- §15 Seasonal ------------------------------------------------------
+	"insights.seasonal.title": "Songs of the seasons",
+	"insights.seasonal.lede":
+		"Tracks whose plays cluster in one part of the year — your summer anthems and winter-only songs.",
+	"insights.seasonal.peak": "peak",
+	"insights.seasonal.concentration": "season-locked",
+	"insights.seasonal.empty": "Need at least 2 years of data to spot seasons.",
+
+	// --- §21 Chronotype ----------------------------------------------------
+	"insights.chronotype.title": "Chronotype drift",
+	"insights.chronotype.lede":
+		"Your typical listening hour over the years — are you getting more nocturnal?",
+	"insights.chronotype.meanHour": "center of gravity",
+	"insights.chronotype.nightShare": "before 6am",
+	"insights.chronotype.meanLine": "mean hour",
+
+	// --- §20 Weekend vs weekday -------------------------------------------
+	"insights.weekend.title": "Weekend vs weekday self",
+	"insights.weekend.lede":
+		"Your weekday self is {pct} different from your weekend self.",
+	"insights.weekend.weekday": "Weekday",
+	"insights.weekend.weekend": "Weekend",
+
+	// --- §16 Attention span ------------------------------------------------
+	"insights.attention.title": "Attention span",
+	"insights.attention.lede":
+		"Do you still finish songs? Average fraction of each track you actually play, per year.",
+	"insights.attention.completion": "avg completion",
+	"insights.attention.median": "median play",
+	"insights.attention.completionLine": "completion",
+
+	// --- §25 Hiatuses ------------------------------------------------------
+	"insights.hiatuses.title": "Hiatuses",
+	"insights.hiatuses.lede":
+		"Stretches where you barely opened Spotify — your longest silences. An export gap can look identical to a real break.",
+
+	// --- §18 Rediscoveries -------------------------------------------------
+	"insights.rediscoveries.title": "Rediscoveries",
+	"insights.rediscoveries.lede":
+		"Tracks that went quiet for months, then came roaring back.",
+	"insights.rediscoveries.revival": "{n} plays in 30 days",
+
+	// --- §19 On repeat -----------------------------------------------------
+	"insights.loops.title": "On repeat",
+	"insights.loops.lede":
+		"Back-to-back consecutive plays of the same track — when you had it on actual repeat.",
+	"insights.loops.run": "{n}× in a row",
+
+	// --- §22 Device archaeology -------------------------------------------
+	"insights.devices.title": "Device archaeology",
+	"insights.devices.lede":
+		"The hardware story hidden in your platform field — when each device family came and went. Coarse by design: the exact user-agent is never imported.",
+	"insights.devices.share": "share",
+
+	// --- §23 Incognito & offline ------------------------------------------
+	"insights.privacy.title": "Incognito & offline",
+	"insights.privacy.lede":
+		"Two flags nobody surfaces: private sessions that never hit your profile, and what you downloaded for the road.",
+	"insights.privacy.incognito": "incognito plays",
+	"insights.privacy.offline": "offline plays",
+	"insights.privacy.topOffline": "Top downloads (offline)",
+	"insights.privacy.topIncognito": "Top incognito tracks",
+	"insights.privacy.none": "No private or offline plays recorded.",
+
+	// --- shared insight columns -------------------------------------------
+	"insights.col.years": "years",
+	"insights.col.peak": "peak month",
+	"insights.col.locked": "locked",
+	"insights.col.gap": "silence",
+	"insights.col.comeback": "comeback",
+	"insights.col.revival": "revival",
+	"insights.col.run": "loop",
+	"insights.col.started": "started",
+	"insights.col.device": "device",
+	"insights.col.first": "first",
+	"insights.col.last": "last",
+	"insights.col.from": "from",
+	"insights.col.to": "to",
+	"insights.col.days": "days",
 
 	// --- shared controls ---------------------------------------------------
 	"controls.rankBy": "rank by",

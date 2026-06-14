@@ -84,6 +84,45 @@ export const q = {
 			queryKey: [entity, "cmp", metric, window] as const,
 			queryFn: () => fetchTop(entity, metric, window),
 		}),
+
+	// --- Insights (ideas.md §15–§25) ---------------------------------------
+	seasonal: () =>
+		queryOptions({ queryKey: ["seasonal"] as const, queryFn: api.seasonal }),
+	attention: () =>
+		queryOptions({ queryKey: ["attention"] as const, queryFn: api.attention }),
+	companions: (kind: "track" | "artist") =>
+		queryOptions({
+			queryKey: ["companions", kind] as const,
+			queryFn: () => api.companions(kind),
+		}),
+	rediscoveries: () =>
+		queryOptions({
+			queryKey: ["rediscoveries"] as const,
+			queryFn: api.rediscoveries,
+		}),
+	loops: () =>
+		queryOptions({ queryKey: ["loops"] as const, queryFn: api.loops }),
+	weekendSplit: () =>
+		queryOptions({
+			queryKey: ["weekendSplit"] as const,
+			queryFn: api.weekendSplit,
+		}),
+	chronotype: () =>
+		queryOptions({
+			queryKey: ["chronotype"] as const,
+			queryFn: api.chronotype,
+		}),
+	devices: () =>
+		queryOptions({ queryKey: ["devices"] as const, queryFn: api.devices }),
+	privacy: () =>
+		queryOptions({ queryKey: ["privacy"] as const, queryFn: api.privacy }),
+	rangeIndex: () =>
+		queryOptions({
+			queryKey: ["rangeIndex"] as const,
+			queryFn: api.rangeIndex,
+		}),
+	hiatuses: () =>
+		queryOptions({ queryKey: ["hiatuses"] as const, queryFn: api.hiatuses }),
 };
 
 // --- Compare helpers (shared by the loader and the view) -------------------

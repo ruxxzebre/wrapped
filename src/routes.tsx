@@ -34,6 +34,16 @@ const Settings = lazyRouteComponent(() => import("./views/Settings"));
 const InsightsDashboard = lazyRouteComponent(
 	() => import("./views/InsightsDashboard"),
 );
+const InsightsTaste = lazyRouteComponent(() => import("./views/InsightsTaste"));
+const InsightsHabits = lazyRouteComponent(
+	() => import("./views/InsightsHabits"),
+);
+const InsightsEvents = lazyRouteComponent(
+	() => import("./views/InsightsEvents"),
+);
+const InsightsDevices = lazyRouteComponent(
+	() => import("./views/InsightsDevices"),
+);
 const TrackDetail = lazyRouteComponent(() => import("./views/TrackDetail"));
 const ArtistDetail = lazyRouteComponent(() => import("./views/ArtistDetail"));
 const YearReview = lazyRouteComponent(() => import("./views/YearReview"));
@@ -171,6 +181,57 @@ const insightsPatternsRoute = createRoute({
 			]),
 		),
 });
+const insightsTasteRoute = createRoute({
+	getParentRoute: () => insightsRoute,
+	path: "taste",
+	component: InsightsTaste,
+	loader: ({ context: { queryClient } }) =>
+		prefetch(queryClient, (qc) =>
+			Promise.all([
+				qc.ensureQueryData(q.rangeIndex()),
+				qc.ensureQueryData(q.companions("track")),
+				qc.ensureQueryData(q.seasonal()),
+			]),
+		),
+});
+const insightsHabitsRoute = createRoute({
+	getParentRoute: () => insightsRoute,
+	path: "habits",
+	component: InsightsHabits,
+	loader: ({ context: { queryClient } }) =>
+		prefetch(queryClient, (qc) =>
+			Promise.all([
+				qc.ensureQueryData(q.chronotype()),
+				qc.ensureQueryData(q.weekendSplit()),
+				qc.ensureQueryData(q.attention()),
+			]),
+		),
+});
+const insightsEventsRoute = createRoute({
+	getParentRoute: () => insightsRoute,
+	path: "events",
+	component: InsightsEvents,
+	loader: ({ context: { queryClient } }) =>
+		prefetch(queryClient, (qc) =>
+			Promise.all([
+				qc.ensureQueryData(q.hiatuses()),
+				qc.ensureQueryData(q.rediscoveries()),
+				qc.ensureQueryData(q.loops()),
+			]),
+		),
+});
+const insightsDevicesRoute = createRoute({
+	getParentRoute: () => insightsRoute,
+	path: "devices",
+	component: InsightsDevices,
+	loader: ({ context: { queryClient } }) =>
+		prefetch(queryClient, (qc) =>
+			Promise.all([
+				qc.ensureQueryData(q.devices()),
+				qc.ensureQueryData(q.privacy()),
+			]),
+		),
+});
 
 // --- Timeline ------------------------------------------------------------
 const calendarRoute = createRoute({
@@ -291,7 +352,14 @@ const routeTree = rootRoute.addChildren([
 	tracksRoute,
 	artistsRoute,
 	libraryRoute,
-	insightsRoute.addChildren([insightsIndexRoute, insightsPatternsRoute]),
+	insightsRoute.addChildren([
+		insightsIndexRoute,
+		insightsPatternsRoute,
+		insightsTasteRoute,
+		insightsHabitsRoute,
+		insightsEventsRoute,
+		insightsDevicesRoute,
+	]),
 	calendarRoute,
 	playLogRoute,
 	compareRoute,

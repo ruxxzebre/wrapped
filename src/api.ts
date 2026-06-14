@@ -199,6 +199,104 @@ export type YearReview = {
 	} | null;
 };
 
+// --- Insights (ideas.md §15–§25) -------------------------------------------
+
+// §15 Seasonal fingerprint: tracks whose plays cluster in one part of the year.
+// peak_month is 0-based (0 = Jan); concentration is the circular resultant
+// length R in [0,1] (1 = one tight season, 0 = spread year-round).
+export type SeasonalTrack = {
+	track_uri: string;
+	name: string;
+	artist: string;
+	plays: number;
+	peak_month: number;
+	concentration: number;
+};
+
+// §16 Attention span: completion behaviour trended per year.
+export type AttentionYear = {
+	year: number;
+	median_ms: number;
+	avg_completion: number; // 0..1, mean fraction of a track played
+};
+
+// §17 Loyal companions: tracks/artists played in every year of the export.
+export type Companion = {
+	key: string; // track_uri (track) or artist name (artist) — links + react key
+	name: string;
+	artist: string; // "" for the artist variant
+	plays: number;
+	hours: number;
+	years: number;
+};
+
+// §18 Rediscovery: a track returned after a long silence and stuck around.
+export type Rediscovery = {
+	track_uri: string;
+	name: string;
+	artist: string;
+	date: string; // the comeback play, YYYY-MM-DD
+	gap_days: number; // silence before it
+	plays_30d: number; // plays in the 30 days after the comeback
+};
+
+// §19 Repeat-one: longest back-to-back consecutive run of the same track.
+export type Loop = {
+	track_uri: string;
+	name: string;
+	artist: string;
+	date: string; // when the run started
+	run_len: number;
+};
+
+// §20 Weekend vs weekday self.
+export type SplitArtist = { artist: string; plays: number };
+export type WeekendSplit = {
+	weekday: SplitArtist[];
+	weekend: SplitArtist[];
+	divergence: number; // 1 − Jaccard(top-50 weekday, top-50 weekend)
+};
+
+// §21 Chronotype drift: circular-mean listening hour per year + night share.
+export type ChronotypeYear = {
+	year: number;
+	mean_hour: number; // 0..23, circular mean of local start hour
+	night_share: number; // share of plays before 06:00 local
+	plays: number;
+};
+
+// §22 Device archaeology (coarse, platform-family only — user_agent is PII).
+export type Device = {
+	device: string;
+	first_seen: string;
+	last_seen: string;
+	hours: number;
+	plays: number;
+};
+
+// §23 Incognito & offline listening.
+export type PrivacyStats = {
+	plays: number;
+	incognito: number;
+	offline: number;
+	incognito_hours: number;
+	offline_hours: number;
+	topOffline: TopTrack[];
+	topIncognito: TopTrack[];
+};
+
+// §24 Range index: how concentrated taste is. bucket is a year or "all".
+export type RangeBucket = {
+	bucket: string;
+	tracks: number;
+	gini: number; // 0 = perfectly even, →1 = dominated by a few tracks
+	top1pct_share: number; // share of plays from the top 1% of tracks
+};
+export type RangeIndex = { all: RangeBucket | null; years: RangeBucket[] };
+
+// §25 Hiatuses: stretches with no listening between active days.
+export type Hiatus = { from: string; to: string; days: number };
+
 export const api = {
 	status: () => ensureReady(),
 	importZip: (file: File, onProgress?: (fraction: number) => void) =>
@@ -232,4 +330,17 @@ export const api = {
 	calendar: (year?: number) => q.calendar(year),
 	onThisDay: () => q.onThisDay(),
 	year: (year: number) => q.year(year),
+
+	// --- Insights (§15–§25) ------------------------------------------------
+	seasonal: () => q.seasonal(),
+	attention: () => q.attention(),
+	companions: (kind: "track" | "artist") => q.companions(kind),
+	rediscoveries: () => q.rediscoveries(),
+	loops: () => q.loops(),
+	weekendSplit: () => q.weekendSplit(),
+	chronotype: () => q.chronotype(),
+	devices: () => q.devices(),
+	privacy: () => q.privacy(),
+	rangeIndex: () => q.rangeIndex(),
+	hiatuses: () => q.hiatuses(),
 };

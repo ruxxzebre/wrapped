@@ -1,14 +1,26 @@
 import type {
 	ArtistDetail,
+	AttentionYear,
 	Bucket,
 	Calendar,
+	ChronotypeYear,
+	Companion,
 	DayCount,
+	Device,
+	Hiatus,
 	LabelCount,
+	Loop,
 	Metric,
 	MonthCount,
 	OnThisDay,
 	PlayRow,
 	PlaysPage,
+	PrivacyStats,
+	RangeBucket,
+	RangeIndex,
+	Rediscovery,
+	SeasonalTrack,
+	SplitArtist,
 	Story,
 	StoryFaded,
 	StoryObsession,
@@ -20,6 +32,7 @@ import type {
 	TrackDetail,
 	TrackRow,
 	TracksPage,
+	WeekendSplit,
 	Window,
 	YearArtistDelta,
 	YearCount,
@@ -777,4 +790,344 @@ export async function year(y: number): Promise<YearReview> {
 		discovery: discovery[0] ?? null,
 		skip_champion: skipChamp[0] ?? null,
 	};
+}
+
+// --- insights.ts (ideas.md §15–§25) -----------------------------------------
+// Every query reads the listens view and the same started_local/counts_as_stream
+// conventions as the rest of the app. Parameters are baked in at sensible
+// defaults here (mirroring topArtists et al.) so the fetchers stay thin.
+
+// §15 Seasonal fingerprint. Treat month-of-year as an angle and compute the
+// circular resultant length R = |mean unit vector|: R≈1 means every play lands
+// in one part of the year, R≈0 means year-round. peak_month is the resultant's
+// direction mapped back to a 0-based month. Requires ≥2 distinct years so a
+// single binge can't masquerade as a season.
+export async function seasonal(
+	minPlays = 25,
+	limit = 24,
+): Promise<SeasonalTrack[]> {
+	return query<SeasonalTrack>(
+		`
+		WITH m AS (
+			SELECT track_uri,
+			       COALESCE(max(track_name), '?')  AS name,
+			       COALESCE(max(artist_name), '?') AS artist,
+			       count(*)                         AS plays,
+			       count(DISTINCT year(started_local)) AS years,
+			       sum(cos(2 * pi() * (month(started_local) - 1) / 12.0)) AS sc,
+			       sum(sin(2 * pi() * (month(started_local) - 1) / 12.0)) AS ss
+			FROM listens
+			GROUP BY track_uri
+		)
+		SELECT track_uri, name, artist, plays,
+		       ((CAST(round(atan2(ss, sc) / (2 * pi()) * 12) AS INTEGER) % 12) + 12) % 12
+		           AS peak_month,
+		       sqrt(sc * sc + ss * ss) / plays AS concentration
+		FROM m
+		WHERE plays >= ? AND years >= 2
+		ORDER BY concentration DESC
+		LIMIT ?`,
+		[minPlays, limit],
+	);
+}
+
+// §16 Attention span. Track length isn't in the export, so the longest play of
+// a track stands in for its full length; completion is each play over that,
+// clamped to 1. Trended per year alongside the median play length.
+export async function attention(): Promise<AttentionYear[]> {
+	return query<AttentionYear>(`
+		WITH t AS (
+			SELECT year(started_local) AS y, ms_played,
+			       max(ms_played) OVER (PARTITION BY track_uri) AS maxms
+			FROM listens
+		)
+		SELECT y AS year,
+		       CAST(median(ms_played) AS BIGINT) AS median_ms,
+		       avg(least(ms_played::DOUBLE / nullif(maxms, 0), 1.0)) AS avg_completion
+		FROM t
+		GROUP BY y ORDER BY y`);
+}
+
+// §17 Loyal companions: tracks (or artists) heard in every single year of the
+// history — the constants. Needs ≥3 years of data before "every year" means
+// anything.
+export async function companions(
+	kind: "track" | "artist",
+	limit = 50,
+): Promise<Companion[]> {
+	if (kind === "artist") {
+		return query<Companion>(
+			`
+			WITH span AS (
+				SELECT max(year(started_local)) - min(year(started_local)) + 1 AS ty
+				FROM listens
+			)
+			SELECT artist_name AS key, artist_name AS name, '' AS artist,
+			       count(*)                   AS plays,
+			       sum(ms_played) / 3600000.0 AS hours,
+			       count(DISTINCT year(started_local)) AS years
+			FROM listens WHERE artist_name IS NOT NULL
+			GROUP BY artist_name
+			HAVING count(DISTINCT year(started_local)) = (SELECT ty FROM span)
+			   AND (SELECT ty FROM span) >= 3
+			ORDER BY hours DESC LIMIT ?`,
+			[limit],
+		);
+	}
+	return query<Companion>(
+		`
+		WITH span AS (
+			SELECT max(year(started_local)) - min(year(started_local)) + 1 AS ty
+			FROM listens
+		)
+		SELECT track_uri AS key,
+		       COALESCE(max(track_name), '?')  AS name,
+		       COALESCE(max(artist_name), '?') AS artist,
+		       count(*)                   AS plays,
+		       sum(ms_played) / 3600000.0 AS hours,
+		       count(DISTINCT year(started_local)) AS years
+		FROM listens
+		GROUP BY track_uri
+		HAVING count(DISTINCT year(started_local)) = (SELECT ty FROM span)
+		   AND (SELECT ty FROM span) >= 3
+		ORDER BY hours DESC LIMIT ?`,
+		[limit],
+	);
+}
+
+// §18 Rediscovery events: a track that went quiet for gapMonths+ and then came
+// roaring back with revivalPlays+ plays in the following 30 days (a real
+// revival, not a one-off nostalgic replay). The 30-day forward count uses a
+// RANGE window frame on the per-track timeline.
+export async function rediscoveries(
+	gapMonths = 6,
+	revivalPlays = 5,
+	limit = 30,
+): Promise<Rediscovery[]> {
+	return query<Rediscovery>(
+		`
+		WITH g AS (
+			SELECT track_uri, ts,
+			       COALESCE(track_name, '?')  AS name,
+			       COALESCE(artist_name, '?') AS artist,
+			       date_diff('day', LAG(ts) OVER (PARTITION BY track_uri ORDER BY ts), ts)
+			           AS gap_days,
+			       count(*) OVER (
+			           PARTITION BY track_uri ORDER BY ts
+			           RANGE BETWEEN CURRENT ROW AND INTERVAL '30 days' FOLLOWING
+			       ) AS plays_30d
+			FROM listens
+		)
+		SELECT track_uri, name, artist,
+		       strftime(ts, '%Y-%m-%d') AS date,
+		       gap_days, plays_30d
+		FROM g
+		WHERE gap_days >= CAST(? AS INTEGER) * 30
+		  AND plays_30d >= CAST(? AS INTEGER)
+		ORDER BY gap_days DESC, plays_30d DESC
+		LIMIT ?`,
+		[gapMonths, revivalPlays, limit],
+	);
+}
+
+// §19 Repeat-one loop detector: back-to-back consecutive plays of the same
+// track. A run starts whenever the previous play was a different track; a
+// running sum of that flag is the run id, and runs of minRun+ are the loops.
+export async function loops(minRun = 3, limit = 30): Promise<Loop[]> {
+	return query<Loop>(
+		`
+		WITH flagged AS (
+			SELECT track_uri, ts,
+			       COALESCE(track_name, '?')  AS name,
+			       COALESCE(artist_name, '?') AS artist,
+			       CASE WHEN LAG(track_uri) OVER (ORDER BY ts) = track_uri
+			            THEN 0 ELSE 1 END AS is_new
+			FROM listens
+		),
+		runs AS (
+			SELECT *, sum(is_new) OVER (ORDER BY ts) AS run_id FROM flagged
+		)
+		SELECT track_uri,
+		       max(name)   AS name,
+		       max(artist) AS artist,
+		       count(*)    AS run_len,
+		       strftime(min(ts), '%Y-%m-%d') AS date
+		FROM runs
+		GROUP BY track_uri, run_id
+		HAVING count(*) >= CAST(? AS INTEGER)
+		ORDER BY run_len DESC, date DESC
+		LIMIT ?`,
+		[minRun, limit],
+	);
+}
+
+// §20 Weekend vs weekday self. Top artists for each side, plus one divergence
+// number: 1 − Jaccard overlap of the two top-50 artist sets.
+export async function weekendSplit(): Promise<WeekendSplit> {
+	const top = (weekend: boolean) =>
+		query<SplitArtist>(`
+			SELECT artist_name AS artist, count(*) AS plays
+			FROM listens
+			WHERE artist_name IS NOT NULL AND counts_as_stream
+			  AND isodow(started_local) ${weekend ? "IN (6, 7)" : "NOT IN (6, 7)"}
+			GROUP BY artist_name ORDER BY plays DESC LIMIT 10`);
+
+	const [weekday, weekend, div] = await Promise.all([
+		top(false),
+		top(true),
+		query<{ inter: number; uni: number }>(`
+			WITH agg AS (
+				SELECT artist_name AS artist,
+				       count(*) FILTER (WHERE isodow(started_local) IN (6, 7))     AS we,
+				       count(*) FILTER (WHERE isodow(started_local) NOT IN (6, 7)) AS wd
+				FROM listens WHERE artist_name IS NOT NULL AND counts_as_stream
+				GROUP BY artist_name
+			),
+			we50 AS (SELECT artist FROM agg WHERE we > 0 ORDER BY we DESC LIMIT 50),
+			wd50 AS (SELECT artist FROM agg WHERE wd > 0 ORDER BY wd DESC LIMIT 50)
+			SELECT
+			  (SELECT count(*) FROM (SELECT * FROM we50 INTERSECT SELECT * FROM wd50)) AS inter,
+			  (SELECT count(*) FROM (SELECT * FROM we50 UNION SELECT * FROM wd50))     AS uni`),
+	]);
+	const d = div[0];
+	const divergence = d && d.uni > 0 ? 1 - d.inter / d.uni : 0;
+	return { weekday, weekend, divergence };
+}
+
+// §21 Chronotype drift. Circular mean of the local start hour per year (the
+// circular mean handles the midnight wraparound a plain avg(hour) botches),
+// plus the share of plays before 06:00.
+export async function chronotype(): Promise<ChronotypeYear[]> {
+	return query<ChronotypeYear>(`
+		SELECT year(started_local) AS year,
+		       count(*) AS plays,
+		       ((CAST(round(atan2(
+		            sum(sin(2 * pi() * hour(started_local) / 24.0)),
+		            sum(cos(2 * pi() * hour(started_local) / 24.0))
+		        ) / (2 * pi()) * 24) AS INTEGER) % 24) + 24) % 24 AS mean_hour,
+		       avg(CASE WHEN hour(started_local) < 6 THEN 1.0 ELSE 0.0 END) AS night_share
+		FROM listens WHERE counts_as_stream
+		GROUP BY year ORDER BY year`);
+}
+
+// §22 Device archaeology. user_agent_decrypted is PII and never ingested, so
+// this is the coarse platform-family version: when each device family first and
+// last appeared and how many hours it logged.
+const DEVICE_FAMILY = `CASE
+	WHEN platform ILIKE '%android%' THEN 'Android'
+	WHEN platform ILIKE '%ios%' OR platform ILIKE '%iphone%'
+	     OR platform ILIKE '%ipad%' OR platform ILIKE '%ipod%' THEN 'iOS'
+	WHEN platform ILIKE '%windows%' THEN 'Windows'
+	WHEN platform ILIKE '%os x%' OR platform ILIKE '%macos%'
+	     OR platform ILIKE '%osx%' THEN 'macOS'
+	WHEN platform ILIKE '%linux%' THEN 'Linux'
+	WHEN platform ILIKE '%cast%' OR platform ILIKE '%chromecast%' THEN 'Cast'
+	WHEN platform ILIKE '%web%' THEN 'Web'
+	WHEN platform ILIKE '%partner%' OR platform ILIKE '%sonos%'
+	     OR platform ILIKE '%speaker%' OR platform ILIKE '%_tv%' THEN 'Speaker / TV'
+	ELSE 'Other'
+END`;
+
+export async function devices(): Promise<Device[]> {
+	return query<Device>(`
+		SELECT ${DEVICE_FAMILY} AS device,
+		       strftime(min(ts), '%Y-%m-%d') AS first_seen,
+		       strftime(max(ts), '%Y-%m-%d') AS last_seen,
+		       sum(ms_played) / 3600000.0 AS hours,
+		       count(*) AS plays
+		FROM listens WHERE platform IS NOT NULL
+		GROUP BY device ORDER BY hours DESC`);
+}
+
+// §23 Incognito & offline listening. Both are plain boolean filters; the top
+// lists surface what you hid (incognito) and what you downloaded for the road
+// (offline). incognito_mode may be NULL on data imported before it was ingested.
+export async function privacy(): Promise<PrivacyStats> {
+	const head = one(
+		await query<Omit<PrivacyStats, "topOffline" | "topIncognito">>(`
+			SELECT count(*) AS plays,
+			       count(*) FILTER (WHERE incognito_mode) AS incognito,
+			       count(*) FILTER (WHERE offline)        AS offline,
+			       COALESCE(sum(ms_played) FILTER (WHERE incognito_mode), 0) / 3600000.0
+			           AS incognito_hours,
+			       COALESCE(sum(ms_played) FILTER (WHERE offline), 0) / 3600000.0
+			           AS offline_hours
+			FROM listens`),
+	);
+	const topWhere = (cond: string) =>
+		query<TopTrack>(`
+			SELECT track_uri,
+			       COALESCE(max(track_name), '?')  AS name,
+			       COALESCE(max(artist_name), '?') AS artist,
+			       count(*)                        AS plays,
+			       sum(ms_played) / 3600000.0      AS hours
+			FROM listens WHERE ${cond}
+			GROUP BY track_uri ORDER BY count(*) DESC LIMIT 10`);
+	const [topOffline, topIncognito] = await Promise.all([
+		topWhere("offline"),
+		topWhere("incognito_mode"),
+	]);
+	return { ...head, topOffline, topIncognito };
+}
+
+// §24 Range index. Gini over track play-counts (0 = perfectly even, →1 =
+// dominated by a few) plus the share of plays from the top 1% of tracks. Run
+// once per year and once over all time. Gini uses the ordered formula
+// G = 2·Σ(i·plays_i)/(n·Σplays_i) − (n+1)/n with i = ascending rank.
+async function rangeFor(bucketExpr: string): Promise<RangeBucket[]> {
+	return query<RangeBucket>(`
+		WITH per AS (
+			SELECT ${bucketExpr} AS bucket, track_uri, count(*) AS plays
+			FROM listens GROUP BY bucket, track_uri
+		),
+		ranked AS (
+			SELECT bucket, plays,
+			       ROW_NUMBER() OVER (PARTITION BY bucket ORDER BY plays ASC)  AS i_asc,
+			       ROW_NUMBER() OVER (PARTITION BY bucket ORDER BY plays DESC) AS i_desc,
+			       count(*)   OVER (PARTITION BY bucket) AS n,
+			       sum(plays) OVER (PARTITION BY bucket) AS total
+			FROM per
+		)
+		SELECT CAST(bucket AS VARCHAR) AS bucket,
+		       n AS tracks,
+		       (2.0 * sum(i_asc * plays) / (n * total)) - (n + 1.0) / n AS gini,
+		       CAST(sum(plays) FILTER (
+		           WHERE i_desc <= greatest(1, CAST(ceil(n * 0.01) AS INTEGER))
+		       ) AS DOUBLE) / total AS top1pct_share
+		FROM ranked
+		GROUP BY bucket, n, total
+		ORDER BY bucket`);
+}
+
+export async function rangeIndex(): Promise<RangeIndex> {
+	const [all, years] = await Promise.all([
+		rangeFor("'all'"),
+		rangeFor("CAST(year(started_local) AS VARCHAR)"),
+	]);
+	return { all: all[0] ?? null, years };
+}
+
+// §25 Hiatuses: the silences. On the set of distinct active days, the gap to the
+// previous active day; keep gaps of minDays+. The inverse read of the streak
+// query.
+export async function hiatuses(minDays = 7, limit = 30): Promise<Hiatus[]> {
+	return query<Hiatus>(
+		`
+		WITH days AS (
+			SELECT DISTINCT CAST(started_local AS DATE) AS d
+			FROM listens WHERE counts_as_stream
+		),
+		gaps AS (
+			SELECT LAG(d) OVER (ORDER BY d) AS prev, d,
+			       date_diff('day', LAG(d) OVER (ORDER BY d), d) AS gap
+			FROM days
+		)
+		SELECT strftime(prev, '%Y-%m-%d') AS "from",
+		       strftime(d, '%Y-%m-%d')    AS "to",
+		       gap AS days
+		FROM gaps
+		WHERE gap >= CAST(? AS INTEGER)
+		ORDER BY gap DESC LIMIT ?`,
+		[minDays, limit],
+	);
 }

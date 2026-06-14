@@ -9,6 +9,10 @@ import * as css from "./InsightsLayout.css";
 const SUBTABS = [
 	{ titleKey: "nav.insights.overview", slug: "/insights" },
 	{ titleKey: "nav./patterns", slug: "/insights/patterns" },
+	{ titleKey: "nav.insights.taste", slug: "/insights/taste" },
+	{ titleKey: "nav.insights.habits", slug: "/insights/habits" },
+	{ titleKey: "nav.insights.events", slug: "/insights/events" },
+	{ titleKey: "nav.insights.devices", slug: "/insights/devices" },
 ] as const;
 
 export default function InsightsLayout() {

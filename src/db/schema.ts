@@ -21,6 +21,7 @@ const CREATE_PLAYS = `CREATE TABLE plays (
 	shuffle       BOOLEAN,
 	skipped       BOOLEAN,
 	offline       BOOLEAN,
+	incognito_mode BOOLEAN,
 	platform      VARCHAR,
 	conn_country  VARCHAR
 )`;
@@ -51,7 +52,7 @@ export async function rebuildPlays(
 				master_metadata_album_artist_name,
 				master_metadata_album_album_name,
 				reason_start, reason_end,
-				shuffle, skipped, offline,
+				shuffle, skipped, offline, incognito_mode,
 				platform, conn_country
 			FROM read_json_auto(${files}, union_by_name = true)
 			WHERE spotify_track_uri IS NOT NULL`);
