@@ -1,13 +1,23 @@
 import { QueryClientProvider } from "@tanstack/react-query";
-// import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { RouterProvider } from "@tanstack/react-router";
-import { StrictMode } from "react";
+import { lazy, StrictMode, Suspense } from "react";
 import { createRoot } from "react-dom/client";
 import "@fontsource-variable/figtree/index.css";
 import "./ui/theme.css";
 import { getConn } from "./db/duckdb";
 import { queryClient } from "./queryClient";
 import { router } from "./routes.tsx";
+
+// Devtools are dev-only: gated on import.meta.env.DEV, which Vite statically
+// replaces with `false` in production. The lazy import keeps the devtools chunk
+// out of the prod bundle entirely (the branch is dead-code-eliminated).
+const ReactQueryDevtools = import.meta.env.DEV
+	? lazy(() =>
+			import("@tanstack/react-query-devtools").then((m) => ({
+				default: m.ReactQueryDevtools,
+			})),
+		)
+	: null;
 
 // Warm the DuckDB-WASM engine (worker + wasm instantiate + icu load) in the
 // background. This no longer gates the UI: ensureReady decides readiness from
@@ -45,7 +55,11 @@ createRoot(rootEl).render(
 	<StrictMode>
 		<QueryClientProvider client={queryClient}>
 			<RouterProvider router={router} />
-			{/* <ReactQueryDevtools initialIsOpen={true} /> */}
+			{ReactQueryDevtools ? (
+				<Suspense>
+					<ReactQueryDevtools initialIsOpen={false} />
+				</Suspense>
+			) : null}
 		</QueryClientProvider>
 	</StrictMode>,
 );
