@@ -111,7 +111,12 @@ export type TrackComeback = {
 	plays_30d: number;
 }; // §K
 
-export type TrackDetail = {
+// The above-the-fold half of a track page: the title row + the headline cards.
+// Cheap to compute (one filtered scan + two session-memoized globals) and — the
+// reason for the split — batchable across many tracks in a single query, so a
+// table of track links can warm every row's cards in one round-trip. See
+// `trackHeads` and `usePrefetchTrackHeads`.
+export type TrackHead = {
 	track_uri: string;
 	name: string;
 	artist: string;
@@ -124,6 +129,12 @@ export type TrackDetail = {
 	last_play: string;
 	rank_plays: number;
 	max_ms: number;
+};
+
+// The below-the-fold half: every panel and derived "goodie". Each field is its
+// own per-track aggregate or full-log window pass, so this is the expensive part
+// — loaded on detail mount only, never warmed in bulk.
+export type TrackDeep = {
 	monthly: MonthCount[];
 	hourly: Bucket[];
 	weekly: Bucket[]; // isodow buckets 1..7 (§G)
@@ -146,6 +157,8 @@ export type TrackDetail = {
 	milestone: TrackMilestone | null; // §J
 	comeback: TrackComeback | null; // §K
 };
+
+export type TrackDetail = TrackHead & TrackDeep;
 
 export type AlbumRow = { album: string; plays: number; hours: number };
 
@@ -415,7 +428,12 @@ export const api = {
 	plays: (cursor: string | undefined, search: string, p: Period) =>
 		q.plays(cursor, search, p),
 
-	track: (uri: string) => q.track(uri),
+	// Track detail, split for preloading: `trackHead` is the cheap, batchable
+	// card data; `trackDeep` is the heavy panels loaded on mount. `trackHeads`
+	// warms many heads at once (one query) for list pages full of track links.
+	trackHead: (uri: string) => q.trackHead(uri),
+	trackHeads: (uris: string[]) => q.trackHeads(uris),
+	trackDeep: (uri: string) => q.trackDeep(uri),
 
 	artist: (name: string) => q.artist(name),
 	artistTracks: (name: string) => q.artistTracks(name),

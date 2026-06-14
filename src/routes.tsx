@@ -309,8 +309,10 @@ const trackRoute = createRoute({
 	getParentRoute: () => rootRoute,
 	path: "/track/$uri",
 	component: TrackDetail,
+	// Warm only the head (cards) so navigation paints instantly; the heavy panel
+	// data loads on mount via its own query and streams in behind a skeleton.
 	loader: ({ context: { queryClient }, params: { uri } }) =>
-		prefetch(queryClient, (qc) => qc.ensureQueryData(q.track(uri))),
+		prefetch(queryClient, (qc) => qc.ensureQueryData(q.trackHead(uri))),
 });
 const artistRoute = createRoute({
 	getParentRoute: () => rootRoute,

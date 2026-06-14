@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { getRouteApi } from "@tanstack/react-router";
-import type { Neighbor } from "../api";
+import type { Neighbor, TrackDeep, TrackHead } from "../api";
 import {
 	fmtDate,
 	fmtDuration,
@@ -25,12 +25,16 @@ import {
 	Grid2,
 	Muted,
 	Panel,
+	Skeleton,
 	Stack,
 	Status,
 } from "../ui";
 import {
 	Breakdown,
+	BreakdownSkeleton,
 	Cards,
+	CardsSkeleton,
+	ChartSkeleton,
 	HourBars,
 	MonthlyChart,
 	WeekBars,
@@ -42,65 +46,147 @@ const route = getRouteApi("/track/$uri");
 export default function TrackDetail() {
 	const t = useT();
 	const { uri } = route.useParams();
-	const { data, error } = useQuery(q.track(uri));
-	if (!data) return <Status error={error} />;
+	// Head paints the title + cards instantly (warmed on preload); deep carries
+	// the heavy panels and loads on mount, streaming in below the cards.
+	const { data: head, error } = useQuery(q.trackHead(uri));
+	const { data: deep } = useQuery(q.trackDeep(uri));
+	if (error) return <Status error={error} />;
+	// The route loader warms head, so this rarely shows — but on a cold/direct
+	// load fall back to the full skeleton rather than a bare "Loading…" line.
+	if (!head)
+		return (
+			<>
+				<DetailHead
+					back={<BackLink />}
+					title={<Skeleton width="40%" height={34} />}
+					sub={<Skeleton width="22%" height={16} />}
+				/>
+				<CardsSkeleton count={6} />
+				<TrackPanelsSkeleton />
+			</>
+		);
 
 	// Skip rate next to the library baseline — a raw percentage means little
 	// without it (§D).
 	const skipMultiple =
-		data.skip_ratio_all > 0
-			? (data.skip_ratio / data.skip_ratio_all).toFixed(1)
+		head.skip_ratio_all > 0
+			? (head.skip_ratio / head.skip_ratio_all).toFixed(1)
 			: null;
 
 	const cards = [
-		{ label: t("card.plays"), value: fmtInt(data.plays) },
-		{ label: t("card.hours"), value: fmtHours(data.hours) },
+		{ label: t("card.plays"), value: fmtInt(head.plays) },
+		{ label: t("card.hours"), value: fmtHours(head.hours) },
 		{
 			label: t("detail.skipRate"),
-			value: fmtPct(data.skip_ratio),
+			value: fmtPct(head.skip_ratio),
 			sub: skipMultiple
 				? t("detail.vsAverage", { x: skipMultiple })
 				: undefined,
 		},
 		{
 			label: t("detail.length"),
-			value: data.max_ms ? fmtDuration(data.max_ms) : t("common.dash"),
+			value: head.max_ms ? fmtDuration(head.max_ms) : t("common.dash"),
 			sub: t("detail.longestPlay"),
 		},
 		{
 			label: t("detail.rank"),
-			value: data.rank_plays ? `#${fmtInt(data.rank_plays)}` : t("common.dash"),
+			value: head.rank_plays ? `#${fmtInt(head.rank_plays)}` : t("common.dash"),
 			sub: t("detail.byPlaysLifetime"),
 		},
 		{
 			label: t("detail.firstHeard"),
-			value: fmtDate(data.first_play),
-			sub: t("summary.latest", { date: fmtDate(data.last_play) }),
+			value: fmtDate(head.first_play),
+			sub: t("summary.latest", { date: fmtDate(head.last_play) }),
 		},
 	];
 
-	// A second row of derived "goodies" — each card omitted when it has nothing
-	// to say (§E, §F, §G, §J).
-	const finished = data.completion.find((c) => c.label === "finished")?.plays;
+	return (
+		<>
+			<DetailHead
+				back={<BackLink />}
+				title={head.name}
+				sub={
+					<>
+						<ArtistLink name={head.artist} /> · <Muted>{head.album}</Muted>
+					</>
+				}
+				action={<SpotifyLink uri={uri} />}
+			/>
+
+			<Cards items={cards} />
+
+			<SpotifyEmbed uri={uri} />
+
+			{deep ? <TrackPanels head={head} deep={deep} /> : <TrackPanelsSkeleton />}
+		</>
+	);
+}
+
+// Placeholder for the deep panels while `trackDeep` resolves. Mirrors only the
+// always-present sections (the extras row, monthly chart, hour/weekday charts
+// and the four breakdowns) at their real heights, so the page holds its shape
+// and the real panels swap in without a jump. Conditional panels (origin,
+// segue, yearly trends, comeback) are simply appended below when they arrive.
+function TrackPanelsSkeleton() {
+	const t = useT();
+	return (
+		<>
+			<CardsSkeleton count={4} />
+
+			<Panel title={t("track.playsPerMonth")}>
+				<ChartSkeleton height={240} />
+			</Panel>
+
+			<Grid2>
+				<Panel title={t("track.whenYouPlay")}>
+					<ChartSkeleton height={200} />
+				</Panel>
+				<Panel title={t("track.byWeekday")}>
+					<ChartSkeleton height={200} />
+				</Panel>
+			</Grid2>
+
+			<Grid2>
+				<BreakdownSkeleton title={t("track.completion")} />
+				<BreakdownSkeleton title={t("track.howItStarts")} />
+			</Grid2>
+
+			<Grid2>
+				<BreakdownSkeleton title={t("track.howItEnds")} />
+				<BreakdownSkeleton title={t("track.platforms")} />
+			</Grid2>
+		</>
+	);
+}
+
+// The below-the-fold panels — split out so they render only once `trackDeep`
+// resolves, keeping the cards above instant on navigation. Derived "goodies"
+// (§E–§K) live here because each draws on a deep field.
+function TrackPanels({ head, deep }: { head: TrackHead; deep: TrackDeep }) {
+	const t = useT();
+
+	// A row of derived "goodies" — each card omitted when it has nothing to say
+	// (§E, §F, §G, §J).
+	const finished = deep.completion.find((c) => c.label === "finished")?.plays;
 	const fullListens =
-		data.max_ms > 0 ? Math.round((data.hours * 3600000) / data.max_ms) : null;
-	const daysSinceLast = data.last_play
-		? Math.floor((Date.now() - Date.parse(data.last_play)) / 86400000)
+		head.max_ms > 0 ? Math.round((head.hours * 3600000) / head.max_ms) : null;
+	const daysSinceLast = head.last_play
+		? Math.floor((Date.now() - Date.parse(head.last_play)) / 86400000)
 		: null;
 	const seasonShow =
-		data.season && data.season.years >= 2 && data.season.concentration >= 0.55;
+		deep.season && deep.season.years >= 2 && deep.season.concentration >= 0.55;
 
 	const extras = [];
-	if (seasonShow && data.season) {
+	if (seasonShow && deep.season) {
 		extras.push({
 			label: t("track.season"),
-			value: monthLabel(data.season.peak_month),
-			sub: fmtPct(data.season.concentration),
+			value: monthLabel(deep.season.peak_month),
+			sub: fmtPct(deep.season.concentration),
 		});
 	}
 	extras.push({
 		label: t("track.shuffleShare"),
-		value: fmtPct(data.shuffle_ratio),
+		value: fmtPct(deep.shuffle_ratio),
 		sub: t("track.shuffleSub"),
 	});
 	if (fullListens != null) {
@@ -121,75 +207,61 @@ export default function TrackDetail() {
 		extras.push({
 			label: t("track.lastPlayed"),
 			value: t("track.daysAgo", { n: fmtInt(daysSinceLast) }),
-			sub: fmtDate(data.last_play),
+			sub: fmtDate(head.last_play),
 		});
 	}
-	if (data.loop) {
+	if (deep.loop) {
 		extras.push({
 			label: t("track.onRepeat"),
-			value: t("insights.loops.run", { n: data.loop.longest_run }),
-			sub: data.loop.date,
+			value: t("insights.loops.run", { n: deep.loop.longest_run }),
+			sub: deep.loop.date,
 		});
 	}
-	if (data.binge_days > 0) {
+	if (deep.binge_days > 0) {
 		extras.push({
 			label: t("track.bingeDays"),
-			value: fmtInt(data.binge_days),
+			value: fmtInt(deep.binge_days),
 			sub: t("track.bingeDaysSub"),
 		});
 	}
-	if (data.milestone) {
+	if (deep.milestone) {
 		extras.push({
 			label: t("track.milestone"),
-			value: fmtDate(data.milestone.date),
+			value: fmtDate(deep.milestone.date),
 			sub: t("count.plays", {
-				count: data.milestone.n,
-				n: fmtInt(data.milestone.n),
+				count: deep.milestone.n,
+				n: fmtInt(deep.milestone.n),
 			}),
 		});
 	}
 
 	const hasSegue =
-		data.neighbors_before.length > 0 || data.neighbors_after.length > 0;
+		deep.neighbors_before.length > 0 || deep.neighbors_after.length > 0;
 	const showSkipSplit =
-		data.skip_shuffle != null && data.skip_intentional != null;
+		deep.skip_shuffle != null && deep.skip_intentional != null;
 
 	return (
 		<>
-			<DetailHead
-				back={<BackLink />}
-				title={data.name}
-				sub={
-					<>
-						<ArtistLink name={data.artist} /> · <Muted>{data.album}</Muted>
-					</>
-				}
-				action={<SpotifyLink uri={uri} />}
-			/>
-
-			<Cards items={cards} />
 			<Cards items={extras} />
 
 			{showSkipSplit && (
 				<Muted>
 					{t("track.skipSplit", {
-						shuffle: fmtPct(data.skip_shuffle ?? 0),
-						intent: fmtPct(data.skip_intentional ?? 0),
+						shuffle: fmtPct(deep.skip_shuffle ?? 0),
+						intent: fmtPct(deep.skip_intentional ?? 0),
 					})}
 				</Muted>
 			)}
 
-			<SpotifyEmbed uri={uri} />
-
-			{data.origin && (
+			{deep.origin && (
 				<Panel title={t("track.originTitle")}>
 					<Stack gap="sm">
 						<span>
 							{t("track.originLine", {
-								weekday: data.origin.weekday,
-								date: fmtDate(data.origin.date),
+								weekday: deep.origin.weekday,
+								date: fmtDate(deep.origin.date),
 							})}
-							{data.origin.prev_uri && (
+							{deep.origin.prev_uri && (
 								<>
 									{" "}
 									{fillNodes(
@@ -197,8 +269,8 @@ export default function TrackDetail() {
 										{
 											gateway: (
 												<TrackLink
-													uri={data.origin.prev_uri}
-													name={data.origin.prev_name}
+													uri={deep.origin.prev_uri}
+													name={deep.origin.prev_name}
 												/>
 											),
 										},
@@ -207,8 +279,8 @@ export default function TrackDetail() {
 							)}
 						</span>
 						<Muted size="sm">
-							{data.origin.platform} ·{" "}
-							{tEnum(t, "reasonStart", data.origin.reason_start)}
+							{deep.origin.platform} ·{" "}
+							{tEnum(t, "reasonStart", deep.origin.reason_start)}
 						</Muted>
 					</Stack>
 				</Panel>
@@ -218,33 +290,33 @@ export default function TrackDetail() {
 				<Grid2>
 					<SeguePanel
 						title={t("track.comesBefore")}
-						rows={data.neighbors_before}
+						rows={deep.neighbors_before}
 					/>
 					<SeguePanel
 						title={t("track.leadsInto")}
-						rows={data.neighbors_after}
+						rows={deep.neighbors_after}
 					/>
 				</Grid2>
 			)}
 
 			<Panel title={t("track.playsPerMonth")}>
-				<MonthlyChart data={data.monthly} metric="plays" />
+				<MonthlyChart data={deep.monthly} metric="plays" />
 			</Panel>
 
 			<Grid2>
 				<Panel title={t("track.whenYouPlay")}>
-					<HourBars data={data.hourly} />
+					<HourBars data={deep.hourly} />
 				</Panel>
 				<Panel title={t("track.byWeekday")}>
-					<WeekBars data={data.weekly} />
+					<WeekBars data={deep.weekly} />
 				</Panel>
 			</Grid2>
 
-			{data.completion_yearly.length >= 2 && (
+			{deep.completion_yearly.length >= 2 && (
 				<Panel title={t("track.completionTrend")}>
 					<YearLineChart
 						percent
-						data={data.completion_yearly.map((c) => ({
+						data={deep.completion_yearly.map((c) => ({
 							year: c.year,
 							value: c.avg_completion,
 						}))}
@@ -252,11 +324,11 @@ export default function TrackDetail() {
 				</Panel>
 			)}
 
-			{data.rank_yearly.length >= 2 && (
+			{deep.rank_yearly.length >= 2 && (
 				<Panel title={t("track.rankByYear")}>
 					<YearLineChart
 						reversed
-						data={data.rank_yearly.map((r) => ({
+						data={deep.rank_yearly.map((r) => ({
 							year: r.year,
 							value: r.rank,
 						}))}
@@ -267,12 +339,12 @@ export default function TrackDetail() {
 			<Grid2>
 				<Breakdown
 					title={t("track.completion")}
-					rows={data.completion}
+					rows={deep.completion}
 					fmtLabel={(l) => tEnum(t, "completion", l)}
 				/>
 				<Breakdown
 					title={t("track.howItStarts")}
-					rows={data.reason_start}
+					rows={deep.reason_start}
 					fmtLabel={(l) => tEnum(t, "reasonStart", l)}
 				/>
 			</Grid2>
@@ -280,27 +352,27 @@ export default function TrackDetail() {
 			<Grid2>
 				<Breakdown
 					title={t("track.howItEnds")}
-					rows={data.reason_end}
+					rows={deep.reason_end}
 					fmtLabel={(l) => tEnum(t, "reasonEnd", l)}
 				/>
-				<Breakdown title={t("track.platforms")} rows={data.platforms} />
+				<Breakdown title={t("track.platforms")} rows={deep.platforms} />
 			</Grid2>
 
-			{data.countries.length > 1 && (
-				<Breakdown title={t("track.countries")} rows={data.countries} />
+			{deep.countries.length > 1 && (
+				<Breakdown title={t("track.countries")} rows={deep.countries} />
 			)}
 
-			{data.comeback && (
+			{deep.comeback && (
 				<Panel title={t("track.comebackTitle")}>
 					<Muted>
 						{t("track.comebackLine", {
 							gap: t("count.days", {
-								count: data.comeback.gap_days,
-								n: fmtInt(data.comeback.gap_days),
+								count: deep.comeback.gap_days,
+								n: fmtInt(deep.comeback.gap_days),
 							}),
-							n: data.comeback.plays_30d,
+							n: deep.comeback.plays_30d,
 						})}{" "}
-						· {fmtDate(data.comeback.date)}
+						· {fmtDate(deep.comeback.date)}
 					</Muted>
 				</Panel>
 			)}

@@ -238,6 +238,34 @@ export function YearLineChart({
 	);
 }
 
+// Stable keys for the placeholder breakdown rows (see CARD_KEYS note).
+const BROW_KEYS = ["r1", "r2", "r3", "r4", "r5", "r6"];
+
+// Placeholder for a Breakdown panel. Reuses the same Panel + grid row layout so
+// the labels, bar and value columns line up exactly with the real content,
+// keeping the panel height stable when it swaps in.
+export function BreakdownSkeleton({
+	title,
+	rows = 4,
+}: {
+	title: string;
+	rows?: number;
+}) {
+	return (
+		<Panel title={title}>
+			<div className={css.breakdown} aria-busy="true">
+				{BROW_KEYS.slice(0, rows).map((k) => (
+					<div className={css.brow} key={k}>
+						<Skeleton width="70%" height={11} />
+						<Skeleton height={14} radius={4} />
+						<Skeleton width={32} height={11} style={{ marginLeft: "auto" }} />
+					</div>
+				))}
+			</div>
+		</Panel>
+	);
+}
+
 // Breakdown renders a labelled proportion bar list (platform split, start
 // reasons, completion bands).
 export function Breakdown({

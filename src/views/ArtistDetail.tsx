@@ -4,7 +4,7 @@ import { useMemo } from "react";
 import type { AlbumRow, TrackRow } from "../api";
 import { fmtDate, fmtHours, fmtInt, fmtPct } from "../format";
 import { type TFunction, useT } from "../i18n";
-import { BackLink, TrackLink } from "../links";
+import { BackLink, TrackLink, usePrefetchTrackHeads } from "../links";
 import { q } from "../queries";
 import {
 	type Column,
@@ -80,6 +80,9 @@ export default function ArtistDetail() {
 	const { name } = route.useParams();
 	const detail = useQuery(q.artist(name));
 	const tracks = useQuery(q.artistTracks(name));
+
+	// Batch-warm the cards for this artist's track list (all linkable below).
+	usePrefetchTrackHeads(tracks.data?.map((row) => row.track_uri) ?? []);
 
 	// "Deep cuts vs hits": share of plays concentrated in the top 3 tracks.
 	const top3Share = useMemo(() => {

@@ -38,7 +38,8 @@ import type {
 	TopArtist,
 	TopTrack,
 	TrackComeback,
-	TrackDetail,
+	TrackDeep,
+	TrackHead,
 	TrackLoop,
 	TrackMilestone,
 	TrackOrigin,
@@ -851,7 +852,96 @@ async function trackComeback(uri: string): Promise<TrackComeback | null> {
 // other's temp table.
 let trkSeq = 0;
 
-export async function track(uri: string): Promise<TrackDetail> {
+// The headline aggregates every head needs, computed straight off `listens`.
+// GROUP BY track_uri so the exact same SELECT serves one track or a batch — the
+// only difference is the WHERE (a single `=` vs an `IN`). Kept in one place so
+// the single and batched paths can never drift.
+const HEAD_AGG = `
+	track_uri,
+	COALESCE(max(track_name), '?')  AS name,
+	COALESCE(max(artist_name), '?') AS artist,
+	COALESCE(max(album_name), '?')  AS album,
+	count(*)                        AS plays,
+	sum(ms_played) / 3600000.0      AS hours,
+	avg(CASE WHEN was_skipped THEN 1.0 ELSE 0.0 END) AS skip_ratio,
+	min(ts) AS first_play, max(ts) AS last_play,
+	max(ms_played) AS max_ms`;
+
+type HeadAgg = {
+	track_uri: string;
+	name: string;
+	artist: string;
+	album: string;
+	plays: number;
+	hours: number | null;
+	skip_ratio: number | null;
+	first_play: string | null;
+	last_play: string | null;
+	max_ms: number | null;
+};
+
+function toHead(
+	row: HeadAgg,
+	skip_ratio_all: number,
+	rank_plays: number,
+): TrackHead {
+	return {
+		track_uri: row.track_uri,
+		name: row.name,
+		artist: row.artist,
+		album: row.album,
+		plays: row.plays,
+		hours: row.hours ?? 0,
+		skip_ratio: row.skip_ratio ?? 0,
+		skip_ratio_all,
+		first_play: row.first_play ?? "",
+		last_play: row.last_play ?? "",
+		rank_plays,
+		max_ms: row.max_ms ?? 0,
+	};
+}
+
+// The above-the-fold half of a track page: title row + headline cards. One
+// filtered scan plus the two session-memoized globals (baseline skip, rank
+// map) — cheap enough to warm on hover/dwell and the part navigation shows
+// instantly while `trackDeep` streams the panels in.
+export async function trackHead(uri: string): Promise<TrackHead> {
+	const [rows, skip_ratio_all, rank_plays] = await Promise.all([
+		query<HeadAgg>(
+			`SELECT ${HEAD_AGG} FROM listens WHERE track_uri = ? GROUP BY track_uri`,
+			[uri],
+		),
+		librarySkipRate(),
+		trackRankMap().then((m) => m.get(uri) ?? 0),
+	]);
+	const row = rows[0];
+	if (!row || row.plays === 0) throw new Error("not found");
+	return toHead(row, skip_ratio_all, rank_plays);
+}
+
+// Batch the head aggregate for many tracks in a single scan: a table of track
+// links (TopTracks, ArtistDetail, …) warms every visible row's cards in one
+// round-trip instead of N full track opens against the single worker. Order is
+// not guaranteed — callers index by track_uri. URIs absent from `listens` are
+// simply missing from the result.
+export async function trackHeads(uris: string[]): Promise<TrackHead[]> {
+	if (uris.length === 0) return [];
+	const placeholders = uris.map(() => "?").join(",");
+	const [rows, skip_ratio_all, rankMap] = await Promise.all([
+		query<HeadAgg>(
+			`SELECT ${HEAD_AGG} FROM listens
+			 WHERE track_uri IN (${placeholders}) GROUP BY track_uri`,
+			uris,
+		),
+		librarySkipRate(),
+		trackRankMap(),
+	]);
+	return rows.map((r) =>
+		toHead(r, skip_ratio_all, rankMap.get(r.track_uri) ?? 0),
+	);
+}
+
+export async function trackDeep(uri: string): Promise<TrackDeep> {
 	// Prefilter this track's rows into a tiny temp table once, then aggregate
 	// against it. The per-track stats below used to re-scan the whole listens
 	// table a dozen times per open; now that's one indexed scan to build `trk`
@@ -865,39 +955,14 @@ export async function track(uri: string): Promise<TrackDetail> {
 		`CREATE TEMP TABLE ${trk} AS SELECT * FROM listens WHERE track_uri = ${lit}`,
 	);
 	try {
-		const head = one(
-			await query<{
-				name: string;
-				artist: string;
-				album: string;
-				plays: number;
-				hours: number | null;
-				skip_ratio: number | null;
-				first_play: string | null;
-				last_play: string | null;
-				max_ms: number | null;
-			}>(
-				`
-				SELECT COALESCE(max(track_name), '?')  AS name,
-				       COALESCE(max(artist_name), '?') AS artist,
-				       COALESCE(max(album_name), '?')  AS album,
-				       count(*)                        AS plays,
-				       sum(ms_played) / 3600000.0      AS hours,
-				       avg(CASE WHEN was_skipped THEN 1.0 ELSE 0.0 END) AS skip_ratio,
-				       min(ts) AS first_play, max(ts) AS last_play,
-				       max(ms_played) AS max_ms
-				FROM ${trk}`,
-			),
-		);
-		if (head.plays === 0) throw new Error("not found");
+		// milestone needs the play count up front to pick its tier; one cheap
+		// count off the prefiltered temp table, then the rest run in parallel so
+		// the heavier global-window passes (segue, loop, rank-by-year) overlap.
+		const plays = one(
+			await query<{ plays: number }>(`SELECT count(*) AS plays FROM ${trk}`),
+		).plays;
 
-		// The baseline skip rate and the lifetime rank are library-wide constants,
-		// memoized for the whole session (see resetTrackCaches). Everything else
-		// scans independently — run in parallel so the heavier global-window passes
-		// (segue, loop, rank-by-year) overlap.
 		const [
-			skip_ratio_all,
-			rank_plays,
 			monthlyRows,
 			hourly,
 			weekly,
@@ -917,8 +982,6 @@ export async function track(uri: string): Promise<TrackDetail> {
 			milestoneRow,
 			comeback,
 		] = await Promise.all([
-			librarySkipRate(),
-			trackRankMap().then((m) => m.get(uri) ?? 0),
 			monthly("track_uri = ?", uri),
 			query<Bucket>(
 				`
@@ -979,23 +1042,11 @@ export async function track(uri: string): Promise<TrackDetail> {
 			trackLoop(uri),
 			bingeDays(uri),
 			trackSeason(uri),
-			milestone(uri, head.plays),
+			milestone(uri, plays),
 			trackComeback(uri),
 		]);
 
 		return {
-			track_uri: uri,
-			name: head.name,
-			artist: head.artist,
-			album: head.album,
-			plays: head.plays,
-			hours: head.hours ?? 0,
-			skip_ratio: head.skip_ratio ?? 0,
-			skip_ratio_all,
-			first_play: head.first_play ?? "",
-			last_play: head.last_play ?? "",
-			rank_plays,
-			max_ms: head.max_ms ?? 0,
 			monthly: monthlyRows,
 			hourly,
 			weekly,

@@ -1,11 +1,51 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { useEffect, useRef } from "react";
+import { api } from "./api";
 import { useT } from "./i18n";
 import * as css from "./links.css";
 import { q } from "./queries";
 import { useSetting } from "./settings";
 import { Muted } from "./ui";
+
+// Batch-warm the head (card) data for a list of track links in a single query,
+// so a table of N track rows costs one round-trip instead of N full track opens
+// against the single DuckDB worker. Only URIs not already cached are fetched,
+// and the request is debounced so re-renders (sort, filter, search keystrokes)
+// don't refire. Capped because the head aggregate is one IN-scan: huge lists
+// (the ~20k-row virtualized Library) would build an unwieldy IN clause, so they
+// stay on per-row dwell prefetch instead of calling this.
+const PREFETCH_HEADS_CAP = 1000;
+const PREFETCH_HEADS_DELAY = 200;
+export function usePrefetchTrackHeads(uris: string[]) {
+	const qc = useQueryClient();
+	// Encode the list as a string so the effect only refires when the set of
+	// URIs actually changes, not on every render that produces a new array.
+	const key = uris.join("\n");
+	useEffect(() => {
+		const list = key ? key.split("\n") : [];
+		if (list.length === 0 || list.length > PREFETCH_HEADS_CAP) return;
+		const missing = list.filter(
+			(u) => u && qc.getQueryData(q.trackHead(u).queryKey) === undefined,
+		);
+		if (missing.length === 0) return;
+		let cancelled = false;
+		const timer = setTimeout(() => {
+			api
+				.trackHeads(missing)
+				.then((heads) => {
+					if (cancelled) return;
+					for (const h of heads)
+						qc.setQueryData(q.trackHead(h.track_uri).queryKey, h);
+				})
+				.catch(() => {});
+		}, PREFETCH_HEADS_DELAY);
+		return () => {
+			cancelled = true;
+			clearTimeout(timer);
+		};
+	}, [key, qc]);
+}
 
 function trackId(uri: string) {
 	return uri.startsWith("spotify:track:")
@@ -56,7 +96,7 @@ function useDwellPrefetch<T extends HTMLElement>(run: () => void) {
 export function TrackLink({ uri, name }: { uri: string; name: string }) {
 	const qc = useQueryClient();
 	const ref = useDwellPrefetch<HTMLAnchorElement>(() => {
-		qc.prefetchQuery(q.track(uri));
+		qc.prefetchQuery(q.trackHead(uri));
 	});
 	return (
 		<Link
