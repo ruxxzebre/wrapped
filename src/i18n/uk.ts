@@ -23,6 +23,15 @@ export const uk: Translation = {
 	"nav./compare": "Порівняння",
 	"nav./import": "Імпорт",
 	"nav./settings": "Налаштування",
+	"nav.group.home": "Головна",
+	"nav.group.music": "Музика",
+	"nav.group.insights": "Аналітика",
+	"nav.group.timeline": "Хронологія",
+	"nav.group.explore": "Дослідження",
+	"nav.group.system": "Система",
+	"nav.insights.overview": "Огляд",
+	"insights.dashboardTitle": "Аналітика",
+	"insights.empty": "Незабаром з'являться нові інсайти.",
 
 	// --- shared controls ---------------------------------------------------
 	"controls.rankBy": "сортувати за",

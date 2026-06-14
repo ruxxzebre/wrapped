@@ -29,6 +29,15 @@ export const en = {
 	"nav./compare": "Compare",
 	"nav./import": "Import",
 	"nav./settings": "Settings",
+	"nav.group.home": "Home",
+	"nav.group.music": "Music",
+	"nav.group.insights": "Insights",
+	"nav.group.timeline": "Timeline",
+	"nav.group.explore": "Explore",
+	"nav.group.system": "System",
+	"nav.insights.overview": "Overview",
+	"insights.dashboardTitle": "Insights",
+	"insights.empty": "More insights are coming soon.",
 
 	// --- shared controls ---------------------------------------------------
 	"controls.rankBy": "rank by",

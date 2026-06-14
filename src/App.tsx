@@ -1,52 +1,86 @@
 import { useQuery } from "@tanstack/react-query";
-import { Outlet, useMatches, useRouterState } from "@tanstack/react-router";
-import { useEffect, useRef, useState } from "react";
+import {
+	Link,
+	Outlet,
+	useMatches,
+	useRouterState,
+} from "@tanstack/react-router";
+import { useEffect, useState } from "react";
 import * as css from "./App.css";
-import { api } from "./api";
 import CommandPalette from "./components/CommandPalette";
-import { type TKey, useLang, useT } from "./i18n";
-import { navigate } from "./router";
-import { TABS } from "./tabs";
+import { useLang, useT } from "./i18n";
+import { q } from "./queries";
+import { leafActive, NAV } from "./tabs";
 import { Button, PageHeader, Splash } from "./ui";
+import * as buttonCss from "./ui/Button.css";
 import Import from "./views/Import";
+
+// Thin top-of-viewport bar shown only while a route loader (or transition) is in
+// flight — feedback on a cold navigation without a full-page spinner. Warm
+// (preloaded) navigations resolve instantly, so it never flashes for those.
+function RouteProgress() {
+	const active = useRouterState({
+		select: (s) => s.isLoading || s.isTransitioning,
+	});
+	return (
+		<div
+			className={
+				active
+					? `${css.routeProgress} ${css.routeProgressActive}`
+					: css.routeProgress
+			}
+			aria-hidden="true"
+		/>
+	);
+}
 
 export default function App() {
 	const t = useT();
 	const lang = useLang();
 	const pathname = useRouterState({ select: (s) => s.location.pathname });
-	// Tab routes carry their title/tint in staticData; detail routes don't, so
-	// they render without a PageHeader — same behavior as before the router
-	// migration.
 	const matches = useMatches();
-	const leaf = matches[matches.length - 1];
-	// Tab routes carry an English title in staticData only to flag "has a header";
-	// the displayed text is translated from the route's slug (which doubles as its
-	// nav key) so it follows the active language.
-	const title = leaf?.staticData.title
-		? t(`nav.${pathname}` as TKey)
+	// Title/tint come from the nearest matched route that defines them, so a
+	// nested child (/insights/patterns) inherits the parent group's "Insights"
+	// header. Detail routes define neither, so they render without a header.
+	const headed = [...matches].reverse().find((m) => m.staticData.titleKey);
+	const title = headed?.staticData.titleKey
+		? t(headed.staticData.titleKey)
 		: undefined;
-	const tint = leaf?.staticData.tint ?? "neutral";
-	// Bare tabs (Story) own the scroll pane for full-screen scroll-snap, so we
-	// drop the content wrapper and footer and let the body scroll itself.
-	const bare = leaf?.staticData.bare ?? false;
+	const tint = headed?.staticData.tint ?? "neutral";
+	const bare = matches.some((m) => m.staticData.bare ?? false);
 
 	// Gate the whole app on whether any history has been ingested. Until it has,
 	// the data endpoints would each error, so we show the import screen instead.
-	const { data: status, error: statusError } = useQuery({
-		queryKey: ["status"],
-		queryFn: api.status,
-	});
+	const { data: status, error: statusError } = useQuery(q.status());
 	const [paletteOpen, setPaletteOpen] = useState(false);
 	const [navOpen, setNavOpen] = useState(false);
-	const mainRef = useRef<HTMLElement>(null);
+	// Which accordion groups are expanded. Seed with the group owning the route
+	// the app loaded on.
+	const [openGroups, setOpenGroups] = useState<Set<string>>(() => {
+		const init = new Set<string>();
+		for (const g of NAV)
+			if (
+				g.kind === "expand" &&
+				g.leaves.some((l) => leafActive(l.slug, pathname))
+			)
+				init.add(g.headerKey);
+		return init;
+	});
 
-	// The body never scrolls; the main pane does. A route change also resets
-	// scroll and dismisses the mobile drawer. pathname is the intended trigger,
-	// not a value read inside the effect.
-	// biome-ignore lint/correctness/useExhaustiveDependencies: react to route change
+	// A route change dismisses the mobile drawer and auto-expands the active
+	// group. Scroll reset/restore is handled by the router (scrollRestoration).
 	useEffect(() => {
-		mainRef.current?.scrollTo(0, 0);
 		setNavOpen(false);
+		setOpenGroups((prev) => {
+			const next = new Set(prev);
+			for (const g of NAV)
+				if (
+					g.kind === "expand" &&
+					g.leaves.some((l) => leafActive(l.slug, pathname))
+				)
+					next.add(g.headerKey);
+			return next;
+		});
 	}, [pathname]);
 
 	useEffect(() => {
@@ -68,15 +102,22 @@ export default function App() {
 		document.documentElement.lang = lang;
 	}, [lang]);
 
-	// Status gate, after all hooks so hook order stays stable. A database that's
-	// initialized but empty shows the welcome importer; an init failure surfaces
-	// its error rather than a blank dashboard.
+	// Status gate, after all hooks so hook order stays stable.
 	if (statusError) return <Splash error={statusError as Error} />;
 	if (!status) return <Splash />;
 	if (!status.ready) return <Import variant="welcome" />;
 
+	const toggleGroup = (key: string) =>
+		setOpenGroups((prev) => {
+			const next = new Set(prev);
+			if (next.has(key)) next.delete(key);
+			else next.add(key);
+			return next;
+		});
+
 	return (
 		<div className={css.shell}>
+			<RouteProgress />
 			<div className={css.menuBar}>
 				<button
 					type="button"
@@ -88,34 +129,65 @@ export default function App() {
 				>
 					☰
 				</button>
-				<a href="#/" className={css.brand}>
+				<Link to="/" className={css.brand}>
 					Wrapped
-				</a>
+				</Link>
 			</div>
 			<aside
 				id="sidebar-nav"
 				className={navOpen ? `${css.sidebar} ${css.sidebarOpen}` : css.sidebar}
 			>
-				<a href="#/" className={css.brand}>
+				<Link to="/" className={css.brand}>
 					Wrapped
-				</a>
+				</Link>
 				<Button variant="chrome" onClick={() => setPaletteOpen(true)}>
 					{t("app.search")} <kbd>Ctrl K</kbd>
 				</Button>
 				<nav className={css.navList}>
-					{TABS.map((tab) => (
-						<Button
-							variant="nav"
-							key={tab.slug}
-							active={tab.slug === pathname}
-							onClick={() => {
-								navigate(tab.slug);
-								setNavOpen(false);
-							}}
-						>
-							{t(`nav.${tab.slug}` as TKey)}
-						</Button>
-					))}
+					{NAV.map((g) =>
+						g.kind === "link" ? (
+							<Link
+								key={g.headerKey}
+								to={g.slug}
+								className={buttonCss.variant.nav}
+								activeProps={{ className: buttonCss.navActive }}
+								activeOptions={{ includeSearch: false }}
+								onClick={() => setNavOpen(false)}
+							>
+								{t(g.headerKey)}
+							</Link>
+						) : (
+							<div key={g.headerKey} className={css.navGroup}>
+								<button
+									type="button"
+									className={css.groupHeader}
+									aria-expanded={openGroups.has(g.headerKey)}
+									onClick={() => toggleGroup(g.headerKey)}
+								>
+									<span>{t(g.headerKey)}</span>
+									<span className={css.chevron} aria-hidden="true">
+										{openGroups.has(g.headerKey) ? "▾" : "▸"}
+									</span>
+								</button>
+								{openGroups.has(g.headerKey) && (
+									<div className={css.groupLeaves}>
+										{g.leaves.map((l) => (
+											<Link
+												key={l.slug}
+												to={l.slug}
+												className={buttonCss.variant.nav}
+												activeProps={{ className: buttonCss.navActive }}
+												activeOptions={{ exact: true, includeSearch: false }}
+												onClick={() => setNavOpen(false)}
+											>
+												{t(l.titleKey)}
+											</Link>
+										))}
+									</div>
+								)}
+							</div>
+						),
+					)}
 				</nav>
 			</aside>
 			{navOpen && (
@@ -125,7 +197,10 @@ export default function App() {
 					onClick={() => setNavOpen(false)}
 				/>
 			)}
-			<main ref={mainRef} className={bare ? css.mainBare : css.main}>
+			<main
+				data-scroll-restoration-id="main"
+				className={bare ? css.mainBare : css.main}
+			>
 				{title && <PageHeader title={title} tint={tint} />}
 				{bare ? (
 					<Outlet />

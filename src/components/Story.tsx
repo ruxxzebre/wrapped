@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { getRouteApi } from "@tanstack/react-router";
+import { getRouteApi, Link } from "@tanstack/react-router";
 import {
 	type CSSProperties,
 	type ReactNode,
@@ -8,10 +8,10 @@ import {
 	useRef,
 	useState,
 } from "react";
-import { api, type StoryPersona } from "../api";
+import type { StoryPersona } from "../api";
 import { fmtHours, fmtInt } from "../format";
 import { fillNodes, type TFunction, useT } from "../i18n";
-import { artistPath, Link, trackPath } from "../router";
+import { q } from "../queries";
 import { palette } from "../ui";
 import * as css from "./Story.css";
 
@@ -24,12 +24,9 @@ const storyApi = getRouteApi("/story");
 
 export default function Story() {
 	const t = useT();
-	const { data: story } = useQuery({ queryKey: ["story"], queryFn: api.story });
+	const { data: story } = useQuery(q.story());
 	// Shares the summary cache with the cards below, so this is usually a hit.
-	const { data: summary } = useQuery({
-		queryKey: ["summary"],
-		queryFn: api.summary,
-	});
+	const { data: summary } = useQuery(q.summary());
 
 	// The active scene lives in the URL (?scene=N). We restore it on mount and
 	// rewrite it (replacing, not pushing) as the reader moves, so leaving for a
@@ -59,7 +56,8 @@ export default function Story() {
 					line={fillNodes(t("story.origin.line", { date: story.origin.date }), {
 						track: (
 							<Link
-								to={trackPath(story.origin.track_uri)}
+								to="/track/$uri"
+								params={{ uri: story.origin.track_uri }}
 								className={css.heroLink}
 							>
 								{story.origin.name}
@@ -121,7 +119,8 @@ export default function Story() {
 					line={fillNodes(t("story.obsession.line"), {
 						track: (
 							<Link
-								to={trackPath(story.obsession.track_uri)}
+								to="/track/$uri"
+								params={{ uri: story.obsession.track_uri }}
 								className={css.heroLink}
 							>
 								{story.obsession.name}
@@ -155,7 +154,8 @@ export default function Story() {
 						{
 							track: (
 								<Link
-									to={trackPath(story.faded.track_uri)}
+									to="/track/$uri"
+									params={{ uri: story.faded.track_uri }}
 									className={css.heroLink}
 								>
 									{story.faded.name}
@@ -365,7 +365,7 @@ function ArtistFoot({ name }: { name: string }) {
 	const t = useT();
 	if (!name || name === "?") return <span>{t("links.unknownArtist")}</span>;
 	return (
-		<Link to={artistPath(name)} className={css.heroLink}>
+		<Link to="/artist/$name" params={{ name }} className={css.heroLink}>
 			{name}
 		</Link>
 	);

@@ -8,10 +8,10 @@ import {
 	XAxis,
 	YAxis,
 } from "recharts";
-import { api } from "../api";
 import OnThisDay from "../components/OnThisDay";
 import { fmtDate, fmtHours, fmtInt } from "../format";
 import { useT } from "../i18n";
+import { q } from "../queries";
 import { chartColors, Panel, Status } from "../ui";
 import { Cards, CardsSkeleton, ChartSkeleton } from "../widgets";
 
@@ -21,10 +21,7 @@ const YEAR_CHART_HEIGHT = 280;
 
 export default function Summary() {
 	const t = useT();
-	const { data, error } = useQuery({
-		queryKey: ["summary"],
-		queryFn: api.summary,
-	});
+	const { data, error } = useQuery(q.summary());
 	// Errors surface as before; loading no longer blanks the page — each section
 	// renders its own placeholder so the layout is stable from first paint.
 	if (error) return <Status error={error} />;
@@ -114,7 +111,12 @@ function YearChart({
 					<XAxis dataKey="year" stroke={chartColors.axis} />
 					<YAxis stroke={chartColors.axis} />
 					<Tooltip {...chartColors.tooltip} />
-					<Bar dataKey={dataKey} fill={color} radius={[3, 3, 0, 0]} />
+					<Bar
+						dataKey={dataKey}
+						fill={color}
+						radius={[3, 3, 0, 0]}
+						isAnimationActive={false}
+					/>
 				</BarChart>
 			</ResponsiveContainer>
 		</Panel>

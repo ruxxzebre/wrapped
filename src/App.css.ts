@@ -1,7 +1,38 @@
-import { style } from "@vanilla-extract/css";
+import { keyframes, style } from "@vanilla-extract/css";
 import { contentPad, vars } from "./ui/theme.css";
 
 const mobile = "screen and (max-width: 768px)";
+
+// Indeterminate top progress bar: a highlight sweeps left→right while a route
+// loader is in flight. Shown only on cold navigations (warm ones resolve before
+// the transition starts), so it reads as "working" rather than a constant chrome.
+const progressSweep = keyframes({
+	"0%": { backgroundPosition: "-40% 0" },
+	"100%": { backgroundPosition: "140% 0" },
+});
+
+export const routeProgress = style({
+	position: "absolute",
+	top: 0,
+	left: 0,
+	right: 0,
+	height: 2,
+	zIndex: 1000,
+	opacity: 0,
+	transition: "opacity 150ms ease",
+	pointerEvents: "none",
+});
+
+export const routeProgressActive = style({
+	opacity: 1,
+	background: `linear-gradient(90deg, transparent, ${vars.color.accent}, transparent)`,
+	backgroundSize: "40% 100%",
+	backgroundRepeat: "no-repeat",
+	animationName: progressSweep,
+	animationDuration: "0.9s",
+	animationIterationCount: "infinite",
+	animationTimingFunction: "ease-in-out",
+});
 
 export const shell = style({
 	vars: { [contentPad]: "1.5rem" },
@@ -162,4 +193,43 @@ export const footerLink = style({
 	fontWeight: 600,
 	transition: "color 150ms",
 	selectors: { "&:hover": { color: vars.color.accentHover } },
+});
+
+// --- accordion sidebar groups --------------------------------------------
+export const navGroup = style({
+	display: "flex",
+	flexDirection: "column",
+	gap: vars.space.xs,
+});
+
+// Group header row: an uppercase, muted toggle with a chevron.
+export const groupHeader = style({
+	display: "flex",
+	alignItems: "center",
+	justifyContent: "space-between",
+	width: "100%",
+	background: "none",
+	border: "none",
+	cursor: "pointer",
+	fontFamily: "inherit",
+	color: vars.color.muted,
+	fontSize: "0.7rem",
+	fontWeight: 800,
+	letterSpacing: "0.08em",
+	textTransform: "uppercase",
+	padding: "0.5rem 0.9rem",
+	transition: "color 150ms",
+	selectors: { "&:hover": { color: vars.color.text } },
+});
+
+export const chevron = style({
+	fontSize: "0.7rem",
+});
+
+// Leaves indent slightly under their group header.
+export const groupLeaves = style({
+	display: "flex",
+	flexDirection: "column",
+	gap: vars.space.xs,
+	paddingLeft: vars.space.sm,
 });

@@ -23,6 +23,15 @@ export const ro: Translation = {
 	"nav./compare": "Comparație",
 	"nav./import": "Import",
 	"nav./settings": "Setări",
+	"nav.group.home": "Acasă",
+	"nav.group.music": "Muzică",
+	"nav.group.insights": "Statistici",
+	"nav.group.timeline": "Cronologie",
+	"nav.group.explore": "Explorare",
+	"nav.group.system": "Sistem",
+	"nav.insights.overview": "Prezentare",
+	"insights.dashboardTitle": "Statistici",
+	"insights.empty": "În curând vor apărea mai multe statistici.",
 
 	// --- shared controls ---------------------------------------------------
 	"controls.rankBy": "clasează după",

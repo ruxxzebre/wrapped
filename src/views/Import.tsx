@@ -1,9 +1,9 @@
 import { useQueryClient } from "@tanstack/react-query";
+import { useNavigate } from "@tanstack/react-router";
 import { type DragEvent, useRef, useState } from "react";
 import { api } from "../api";
 import { asset } from "../asset";
 import { fillNodes, useT } from "../i18n";
-import { navigate } from "../router";
 import { Panel } from "../ui";
 import * as css from "./Import.css";
 
@@ -42,6 +42,7 @@ export default function Import({
 } = {}) {
 	const t = useT();
 	const qc = useQueryClient();
+	const navigate = useNavigate();
 	const inputRef = useRef<HTMLInputElement>(null);
 	const [phase, setPhase] = useState<Phase>({ kind: "idle" });
 	const [dragging, setDragging] = useState(false);
@@ -75,7 +76,7 @@ export default function Import({
 			await qc.invalidateQueries();
 			// Fresh data deserves a fresh read: always send the user to Story
 			// first, regardless of which URL the import was triggered from.
-			navigate("/story");
+			await navigate({ to: "/story" });
 			setPhase({ kind: "done" });
 		} catch (err) {
 			setPhase({

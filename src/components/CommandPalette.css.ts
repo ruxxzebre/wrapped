@@ -26,7 +26,11 @@ export const result = style({
 	display: "flex",
 	alignItems: "center",
 	gap: "0.7rem",
+	width: "100%",
+	boxSizing: "border-box",
 	padding: `0.5rem ${vars.space.xl}`,
+	color: "inherit",
+	textDecoration: "none",
 	cursor: "pointer",
 });
 

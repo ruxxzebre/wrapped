@@ -107,6 +107,7 @@ export function MonthlyChart({
 						stroke={color}
 						fill={color}
 						fillOpacity={0.25}
+						isAnimationActive={false}
 					/>
 				</AreaChart>
 			) : (
@@ -120,7 +121,12 @@ export function MonthlyChart({
 					/>
 					<YAxis stroke={chartColors.axis} />
 					<Tooltip {...chartColors.tooltip} />
-					<Bar dataKey={metric} fill={color} radius={[3, 3, 0, 0]} />
+					<Bar
+						dataKey={metric}
+						fill={color}
+						radius={[3, 3, 0, 0]}
+						isAnimationActive={false}
+					/>
 				</BarChart>
 			)}
 		</ResponsiveContainer>
@@ -146,7 +152,12 @@ export function HourBars({ data }: { data: Bucket[] }) {
 				/>
 				<YAxis stroke={chartColors.axis} />
 				<Tooltip {...chartColors.tooltip} />
-				<Bar dataKey="plays" fill={chartColors.accent} radius={[3, 3, 0, 0]} />
+				<Bar
+					dataKey="plays"
+					fill={chartColors.accent}
+					radius={[3, 3, 0, 0]}
+					isAnimationActive={false}
+				/>
 			</BarChart>
 		</ResponsiveContainer>
 	);

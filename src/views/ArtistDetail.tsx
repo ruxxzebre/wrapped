@@ -1,9 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
+import { getRouteApi } from "@tanstack/react-router";
 import { useMemo } from "react";
-import { type AlbumRow, api, type TrackRow } from "../api";
+import type { AlbumRow, TrackRow } from "../api";
 import { fmtDate, fmtHours, fmtInt, fmtPct } from "../format";
 import { type TFunction, useT } from "../i18n";
 import { BackLink, TrackLink } from "../links";
+import { q } from "../queries";
 import {
 	type Column,
 	DataTable,
@@ -71,16 +73,13 @@ const trackColumns = (t: TFunction): Column<TrackRow>[] => [
 	},
 ];
 
-export default function ArtistDetail({ name }: { name: string }) {
+const route = getRouteApi("/artist/$name");
+
+export default function ArtistDetail() {
 	const t = useT();
-	const detail = useQuery({
-		queryKey: ["artist", name],
-		queryFn: () => api.artist(name),
-	});
-	const tracks = useQuery({
-		queryKey: ["artistTracks", name],
-		queryFn: () => api.artistTracks(name),
-	});
+	const { name } = route.useParams();
+	const detail = useQuery(q.artist(name));
+	const tracks = useQuery(q.artistTracks(name));
 
 	// "Deep cuts vs hits": share of plays concentrated in the top 3 tracks.
 	const top3Share = useMemo(() => {

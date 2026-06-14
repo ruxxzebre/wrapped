@@ -1,9 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
-import { api, type TrackRow } from "../api";
+import type { TrackRow } from "../api";
 import { fmtDate, fmtHours, fmtInt, fmtPct } from "../format";
 import { type TFunction, useT } from "../i18n";
 import { ArtistLink, TrackLink } from "../links";
+import { q } from "../queries";
 import {
 	ControlsBar,
 	Field,
@@ -82,10 +83,7 @@ type SortKey = keyof Pick<
 // memory; search/sort never hit the server. Only the DOM is virtualized.
 export default function Library() {
 	const t = useT();
-	const { data, error } = useQuery({
-		queryKey: ["allTracks"],
-		queryFn: api.allTracks,
-	});
+	const { data, error } = useQuery(q.allTracks());
 	const [search, setSearch] = useState("");
 	const [sort, setSort] = useState<Sort>({ key: "plays", desc: true });
 	const COLUMNS = useMemo(() => columns(t), [t]);
@@ -145,6 +143,7 @@ export default function Library() {
 				rowKey={(t) => t.track_uri}
 				sort={sort}
 				onSortChange={onSortChange}
+				scrollRestorationId="library"
 			/>
 		</>
 	);

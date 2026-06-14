@@ -1,10 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
-import { api, type Metric, type TopTrack, type Window } from "../api";
+import type { Metric, TopTrack, Window } from "../api";
 import { MetricToggle, NumberInput, WindowPicker } from "../controls";
 import { fmtHours, fmtInt } from "../format";
 import { type TFunction, useT } from "../i18n";
 import { ArtistLink, TrackLink } from "../links";
+import { q } from "../queries";
 import {
 	type Column,
 	ControlsBar,
@@ -56,8 +57,7 @@ export default function TopTracks() {
 	const COLUMNS = useMemo(() => columns(t), [t]);
 
 	const { data, error } = useQuery({
-		queryKey: ["topTracks", metric, window, minMs, limit],
-		queryFn: () => api.topTracks(metric, window, minMs, limit),
+		...q.topTracks(metric, window, minMs, limit),
 		placeholderData: (prev) => prev,
 	});
 

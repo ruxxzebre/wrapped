@@ -9,10 +9,11 @@ import {
 	XAxis,
 	YAxis,
 } from "recharts";
-import { api, type Bucket, type Window } from "../api";
+import type { Bucket, Window } from "../api";
 import { WindowPicker } from "../controls";
 import { weekdayShort } from "../format";
 import { useT } from "../i18n";
+import { q } from "../queries";
 import { ControlsBar, chartColors, Panel, Status } from "../ui";
 
 export default function Patterns() {
@@ -20,13 +21,11 @@ export default function Patterns() {
 	const [window, setWindow] = useState<Window>({});
 
 	const hourly = useQuery({
-		queryKey: ["hourly", window],
-		queryFn: () => api.hourly(window),
+		...q.hourly(window),
 		placeholderData: (prev) => prev,
 	});
 	const weekly = useQuery({
-		queryKey: ["weekly", window],
-		queryFn: () => api.weekly(window),
+		...q.weekly(window),
 		placeholderData: (prev) => prev,
 	});
 
@@ -86,6 +85,7 @@ function PatternChart({
 						dataKey="hours"
 						fill={chartColors.accent}
 						radius={[3, 3, 0, 0]}
+						isAnimationActive={false}
 					/>
 				</BarChart>
 			</ResponsiveContainer>

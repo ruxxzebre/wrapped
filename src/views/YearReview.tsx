@@ -1,10 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
-import { api, type YearArtistDelta, type YearTrackDelta } from "../api";
+import { getRouteApi, Link } from "@tanstack/react-router";
+import type { YearArtistDelta, YearTrackDelta } from "../api";
 import { fmtDate, fmtHours, fmtInt, fmtPct } from "../format";
 import { type TFunction, useT } from "../i18n";
 import { ArtistLink, BackLink, TrackLink } from "../links";
 import * as linkCss from "../links.css";
-import { Link, yearPath } from "../router";
+import { q } from "../queries";
 import {
 	Card,
 	CardGrid,
@@ -84,20 +85,17 @@ const artistColumns = (t: TFunction): Column<YearArtistDelta>[] => [
 	},
 ];
 
-export default function YearReview({ year }: { year: number }) {
+const route = getRouteApi("/year/$year");
+
+export default function YearReview() {
 	const t = useT();
-	const { data: summary } = useQuery({
-		queryKey: ["summary"],
-		queryFn: api.summary,
-	});
+	const year = Number(route.useParams().year);
+	const { data: summary } = useQuery(q.summary());
 	const years = (summary?.years ?? []).map((y) => y.year).sort((a, b) => a - b);
 	const prev = years.filter((y) => y < year).at(-1);
 	const next = years.find((y) => y > year);
 
-	const { data, error } = useQuery({
-		queryKey: ["year", year],
-		queryFn: () => api.year(year),
-	});
+	const { data, error } = useQuery(q.year(year));
 	if (!data) return <Status error={error} />;
 
 	const cards = [
@@ -211,7 +209,12 @@ export default function YearReview({ year }: { year: number }) {
 
 function YearLink({ year, dir }: { year: number; dir: "prev" | "next" }) {
 	return (
-		<Link to={yearPath(year)} className={linkCss.entity}>
+		<Link
+			to="/year/$year"
+			params={{ year: String(year) }}
+			preload="viewport"
+			className={linkCss.entity}
+		>
 			{dir === "prev" ? `← ${year}` : `${year} →`}
 		</Link>
 	);

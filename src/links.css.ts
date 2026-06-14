@@ -35,13 +35,35 @@ export const spotifyButton = style({
 
 // Embedded Spotify web player. Compact 152px height (single-track variant) so it
 // slots between the header and the stats cards without dominating the page.
+// Stacking context for the player. Owns the footprint (152px + bottom margin)
+// so the page never reflows; the skeleton and iframe are absolutely positioned
+// children that overlap inside it.
+export const spotifyEmbedFrame = style({
+	position: "relative",
+	width: "100%",
+	height: "152px",
+	marginBottom: vars.space.xl,
+	borderRadius: "12px",
+	overflow: "hidden",
+});
+
+// Iframe sits on top of the skeleton, transparent until its content finishes
+// loading. Fading in on onLoad (via spotifyEmbedLoaded) means there is never a
+// blank box between "skeleton hidden" and "player painted".
 export const spotifyEmbed = style({
+	position: "absolute",
+	inset: 0,
 	display: "block",
 	width: "100%",
 	height: "152px",
 	border: "none",
 	borderRadius: "12px",
-	marginBottom: vars.space.xl,
+	opacity: 0,
+	transition: "opacity 120ms ease-out",
+});
+
+export const spotifyEmbedLoaded = style({
+	opacity: 1,
 });
 
 // Back breadcrumb sitting at the top of a detail banner. Bare ghost link that
@@ -91,15 +113,16 @@ const shimmer = keyframes({
 	"100%": { backgroundPosition: "-200% 0" },
 });
 
-// Placeholder shown while the oembed probe is in flight. Matches the player's
-// footprint (152px + bottom margin) so the page doesn't reflow when the iframe
-// swaps in, and animates a subtle shimmer to read as "loading".
+// Placeholder under the player, shown while the oembed probe is in flight AND
+// while the iframe loads its own content on top. Absolutely fills the frame and
+// animates a subtle shimmer to read as "loading"; the iframe fades in over it.
 export const spotifyEmbedSkeleton = style({
+	position: "absolute",
+	inset: 0,
 	display: "block",
 	width: "100%",
-	height: "152px",
+	height: "100%",
 	borderRadius: "12px",
-	marginBottom: vars.space.xl,
 	background: `linear-gradient(90deg, ${vars.color.panel} 25%, ${vars.color.panelHover} 50%, ${vars.color.panel} 75%)`,
 	backgroundSize: "200% 100%",
 	animation: `${shimmer} 1.4s ease-in-out infinite`,
