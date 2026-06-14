@@ -115,6 +115,39 @@ const METRICS: Record<Metric, string> = {
 	ms: "sum(ms_played)",
 };
 
+// --- session caches for library-wide constants -----------------------------
+// The skip-rate baseline and every track's lifetime play-rank are identical for
+// every track-detail open, yet each open used to recompute both — a full-table
+// avg and a full GROUP BY + RANK window over all tracks. Compute each once per
+// dataset and reuse it; createListensView() calls resetTrackCaches() whenever
+// the listens table is rebuilt (import, restore, timezone change), so the memos
+// never outlive the data they were derived from. Promises are memoized (not
+// values) so concurrent first callers share one in-flight query.
+let baselineSkipPromise: Promise<number> | null = null;
+let rankMapPromise: Promise<Map<string, number>> | null = null;
+
+export function resetTrackCaches(): void {
+	baselineSkipPromise = null;
+	rankMapPromise = null;
+}
+
+/** Library-wide skip rate — the baseline a track's own rate is compared against. */
+function librarySkipRate(): Promise<number> {
+	baselineSkipPromise ??= query<{ s: number | null }>(
+		"SELECT avg(CASE WHEN was_skipped THEN 1.0 ELSE 0.0 END) AS s FROM listens",
+	).then((rows) => rows[0]?.s ?? 0);
+	return baselineSkipPromise;
+}
+
+/** track_uri → lifetime rank by play count, computed once over the whole log. */
+function trackRankMap(): Promise<Map<string, number>> {
+	rankMapPromise ??= query<{ track_uri: string; rnk: number }>(
+		`SELECT track_uri, RANK() OVER (ORDER BY count(*) DESC) AS rnk
+		 FROM listens GROUP BY track_uri`,
+	).then((rows) => new Map(rows.map((r) => [r.track_uri, r.rnk])));
+	return rankMapPromise;
+}
+
 // --- summary.go -------------------------------------------------------------
 
 export async function summary(): Promise<Summary> {
@@ -812,177 +845,182 @@ async function trackComeback(uri: string): Promise<TrackComeback | null> {
 	return r ?? null;
 }
 
+// Monotonic suffix for the per-call prefilter temp table. The connection is
+// shared, so a preload-on-intent can fire track() for a second uri while the
+// first is mid-flight; a unique name per call keeps the two from clobbering each
+// other's temp table.
+let trkSeq = 0;
+
 export async function track(uri: string): Promise<TrackDetail> {
-	const head = one(
-		await query<{
-			name: string;
-			artist: string;
-			album: string;
-			plays: number;
-			hours: number | null;
-			skip_ratio: number | null;
-			first_play: string | null;
-			last_play: string | null;
-			max_ms: number | null;
-		}>(
-			`
-			SELECT COALESCE(max(track_name), '?')  AS name,
-			       COALESCE(max(artist_name), '?') AS artist,
-			       COALESCE(max(album_name), '?')  AS album,
-			       count(*)                        AS plays,
-			       sum(ms_played) / 3600000.0      AS hours,
-			       avg(CASE WHEN was_skipped THEN 1.0 ELSE 0.0 END) AS skip_ratio,
-			       min(ts) AS first_play, max(ts) AS last_play,
-			       max(ms_played) AS max_ms
-			FROM listens WHERE track_uri = ?`,
-			[uri],
-		),
+	// Prefilter this track's rows into a tiny temp table once, then aggregate
+	// against it. The per-track stats below used to re-scan the whole listens
+	// table a dozen times per open; now that's one indexed scan to build `trk`
+	// plus a handful of scans over a few-hundred-row table. The library-wide
+	// passes that genuinely need the full log (segue, loop, origin, rankYearly)
+	// stay on listens. uri is a Spotify URI, escaped here because a parameter
+	// inside CREATE TABLE AS isn't reliably bound by the prepared-statement path.
+	const trk = `trk_${trkSeq++}`;
+	const lit = `'${uri.replaceAll("'", "''")}'`;
+	await query(
+		`CREATE TEMP TABLE ${trk} AS SELECT * FROM listens WHERE track_uri = ${lit}`,
 	);
-	if (head.plays === 0) throw new Error("not found");
+	try {
+		const head = one(
+			await query<{
+				name: string;
+				artist: string;
+				album: string;
+				plays: number;
+				hours: number | null;
+				skip_ratio: number | null;
+				first_play: string | null;
+				last_play: string | null;
+				max_ms: number | null;
+			}>(
+				`
+				SELECT COALESCE(max(track_name), '?')  AS name,
+				       COALESCE(max(artist_name), '?') AS artist,
+				       COALESCE(max(album_name), '?')  AS album,
+				       count(*)                        AS plays,
+				       sum(ms_played) / 3600000.0      AS hours,
+				       avg(CASE WHEN was_skipped THEN 1.0 ELSE 0.0 END) AS skip_ratio,
+				       min(ts) AS first_play, max(ts) AS last_play,
+				       max(ms_played) AS max_ms
+				FROM ${trk}`,
+			),
+		);
+		if (head.plays === 0) throw new Error("not found");
 
-	// Library-wide skip rate, the baseline this track's rate is compared against.
-	const baseline = await query<{ s: number | null }>(
-		"SELECT avg(CASE WHEN was_skipped THEN 1.0 ELSE 0.0 END) AS s FROM listens",
-	);
+		// The baseline skip rate and the lifetime rank are library-wide constants,
+		// memoized for the whole session (see resetTrackCaches). Everything else
+		// scans independently — run in parallel so the heavier global-window passes
+		// (segue, loop, rank-by-year) overlap.
+		const [
+			skip_ratio_all,
+			rank_plays,
+			monthlyRows,
+			hourly,
+			weekly,
+			platforms,
+			reason_start,
+			reason_end,
+			completionRows,
+			completion_yearly,
+			countries,
+			rank_yearly,
+			shuffle,
+			neighbors,
+			originRow,
+			loop,
+			binge_days,
+			season,
+			milestoneRow,
+			comeback,
+		] = await Promise.all([
+			librarySkipRate(),
+			trackRankMap().then((m) => m.get(uri) ?? 0),
+			monthly("track_uri = ?", uri),
+			query<Bucket>(
+				`
+				SELECT hour(started_local) AS bucket, count(*) AS plays,
+				       sum(ms_played) / 3600000.0 AS hours
+				FROM ${trk}
+				GROUP BY 1 ORDER BY 1`,
+			),
+			query<Bucket>(
+				`
+				SELECT isodow(started_local) AS bucket, count(*) AS plays,
+				       sum(ms_played) / 3600000.0 AS hours
+				FROM ${trk}
+				GROUP BY 1 ORDER BY 1`,
+			),
+			query<LabelCount>(
+				`
+				SELECT platform AS label, count(*) AS plays
+				FROM ${trk}
+				GROUP BY platform ORDER BY count(*) DESC`,
+			),
+			query<LabelCount>(
+				`
+				SELECT COALESCE(reason_start, '?') AS label, count(*) AS plays
+				FROM ${trk}
+				GROUP BY reason_start ORDER BY count(*) DESC`,
+			),
+			query<LabelCount>(
+				`
+				SELECT COALESCE(reason_end, '?') AS label, count(*) AS plays
+				FROM ${trk}
+				GROUP BY reason_end ORDER BY count(*) DESC`,
+			),
+			completion(uri),
+			completionYearly(uri),
+			query<LabelCount>(
+				`
+				SELECT COALESCE(conn_country, '?') AS label, count(*) AS plays
+				FROM ${trk}
+				GROUP BY conn_country ORDER BY count(*) DESC`,
+			),
+			rankYearly(uri),
+			query<{
+				shuffle_ratio: number | null;
+				skip_shuffle: number | null;
+				skip_intentional: number | null;
+			}>(
+				`
+				SELECT avg(CASE WHEN shuffle THEN 1.0 ELSE 0.0 END) AS shuffle_ratio,
+				       avg(CASE WHEN was_skipped THEN 1.0 ELSE 0.0 END)
+				           FILTER (WHERE shuffle) AS skip_shuffle,
+				       avg(CASE WHEN was_skipped THEN 1.0 ELSE 0.0 END)
+				           FILTER (WHERE NOT COALESCE(shuffle, false)) AS skip_intentional
+				FROM ${trk}`,
+			),
+			segue(uri),
+			origin(uri),
+			trackLoop(uri),
+			bingeDays(uri),
+			trackSeason(uri),
+			milestone(uri, head.plays),
+			trackComeback(uri),
+		]);
 
-	// Lifetime rank among all tracks by play count.
-	const rank = await query<{ rnk: number }>(
-		`
-		SELECT rnk FROM (
-			SELECT track_uri, RANK() OVER (ORDER BY count(*) DESC) AS rnk
-			FROM listens GROUP BY track_uri
-		) WHERE track_uri = ?`,
-		[uri],
-	);
-
-	// Everything below scans the listens view independently — run in parallel so
-	// the heavier global-window passes (segue, loop, rank-by-year) overlap.
-	const [
-		monthlyRows,
-		hourly,
-		weekly,
-		platforms,
-		reason_start,
-		reason_end,
-		completionRows,
-		completion_yearly,
-		countries,
-		rank_yearly,
-		shuffle,
-		neighbors,
-		originRow,
-		loop,
-		binge_days,
-		season,
-		milestoneRow,
-		comeback,
-	] = await Promise.all([
-		monthly("track_uri = ?", uri),
-		query<Bucket>(
-			`
-			SELECT hour(started_local) AS bucket, count(*) AS plays,
-			       sum(ms_played) / 3600000.0 AS hours
-			FROM listens WHERE track_uri = ?
-			GROUP BY 1 ORDER BY 1`,
-			[uri],
-		),
-		query<Bucket>(
-			`
-			SELECT isodow(started_local) AS bucket, count(*) AS plays,
-			       sum(ms_played) / 3600000.0 AS hours
-			FROM listens WHERE track_uri = ?
-			GROUP BY 1 ORDER BY 1`,
-			[uri],
-		),
-		query<LabelCount>(
-			`
-			SELECT platform AS label, count(*) AS plays
-			FROM listens WHERE track_uri = ?
-			GROUP BY platform ORDER BY count(*) DESC`,
-			[uri],
-		),
-		query<LabelCount>(
-			`
-			SELECT COALESCE(reason_start, '?') AS label, count(*) AS plays
-			FROM listens WHERE track_uri = ?
-			GROUP BY reason_start ORDER BY count(*) DESC`,
-			[uri],
-		),
-		query<LabelCount>(
-			`
-			SELECT COALESCE(reason_end, '?') AS label, count(*) AS plays
-			FROM listens WHERE track_uri = ?
-			GROUP BY reason_end ORDER BY count(*) DESC`,
-			[uri],
-		),
-		completion(uri),
-		completionYearly(uri),
-		query<LabelCount>(
-			`
-			SELECT COALESCE(conn_country, '?') AS label, count(*) AS plays
-			FROM listens WHERE track_uri = ?
-			GROUP BY conn_country ORDER BY count(*) DESC`,
-			[uri],
-		),
-		rankYearly(uri),
-		query<{
-			shuffle_ratio: number | null;
-			skip_shuffle: number | null;
-			skip_intentional: number | null;
-		}>(
-			`
-			SELECT avg(CASE WHEN shuffle THEN 1.0 ELSE 0.0 END) AS shuffle_ratio,
-			       avg(CASE WHEN was_skipped THEN 1.0 ELSE 0.0 END)
-			           FILTER (WHERE shuffle) AS skip_shuffle,
-			       avg(CASE WHEN was_skipped THEN 1.0 ELSE 0.0 END)
-			           FILTER (WHERE NOT COALESCE(shuffle, false)) AS skip_intentional
-			FROM listens WHERE track_uri = ?`,
-			[uri],
-		),
-		segue(uri),
-		origin(uri),
-		trackLoop(uri),
-		bingeDays(uri),
-		trackSeason(uri),
-		milestone(uri, head.plays),
-		trackComeback(uri),
-	]);
-
-	return {
-		track_uri: uri,
-		name: head.name,
-		artist: head.artist,
-		album: head.album,
-		plays: head.plays,
-		hours: head.hours ?? 0,
-		skip_ratio: head.skip_ratio ?? 0,
-		skip_ratio_all: baseline[0]?.s ?? 0,
-		first_play: head.first_play ?? "",
-		last_play: head.last_play ?? "",
-		rank_plays: rank[0]?.rnk ?? 0,
-		max_ms: head.max_ms ?? 0,
-		monthly: monthlyRows,
-		hourly,
-		weekly,
-		platforms,
-		reason_start,
-		reason_end,
-		completion: completionRows,
-		completion_yearly,
-		countries,
-		rank_yearly,
-		shuffle_ratio: shuffle[0]?.shuffle_ratio ?? 0,
-		skip_shuffle: shuffle[0]?.skip_shuffle ?? null,
-		skip_intentional: shuffle[0]?.skip_intentional ?? null,
-		neighbors_before: neighbors.before,
-		neighbors_after: neighbors.after,
-		origin: originRow,
-		loop,
-		binge_days,
-		season,
-		milestone: milestoneRow,
-		comeback,
-	};
+		return {
+			track_uri: uri,
+			name: head.name,
+			artist: head.artist,
+			album: head.album,
+			plays: head.plays,
+			hours: head.hours ?? 0,
+			skip_ratio: head.skip_ratio ?? 0,
+			skip_ratio_all,
+			first_play: head.first_play ?? "",
+			last_play: head.last_play ?? "",
+			rank_plays,
+			max_ms: head.max_ms ?? 0,
+			monthly: monthlyRows,
+			hourly,
+			weekly,
+			platforms,
+			reason_start,
+			reason_end,
+			completion: completionRows,
+			completion_yearly,
+			countries,
+			rank_yearly,
+			shuffle_ratio: shuffle[0]?.shuffle_ratio ?? 0,
+			skip_shuffle: shuffle[0]?.skip_shuffle ?? null,
+			skip_intentional: shuffle[0]?.skip_intentional ?? null,
+			neighbors_before: neighbors.before,
+			neighbors_after: neighbors.after,
+			origin: originRow,
+			loop,
+			binge_days,
+			season,
+			milestone: milestoneRow,
+			comeback,
+		};
+	} finally {
+		await query(`DROP TABLE IF EXISTS ${trk}`).catch(() => {});
+	}
 }
 
 export async function artist(name: string): Promise<ArtistDetail> {

@@ -1,4 +1,5 @@
 import { query } from "./duckdb";
+import { resetTrackCaches } from "./queries";
 
 // Schema + listens view, ported verbatim from backend/internal/store/ingest.go.
 //
@@ -73,21 +74,37 @@ export function isValidTimezone(tz: string): boolean {
 }
 
 /**
- * Defines listens, the only surface analytics may query (spec §4):
+ * Builds listens, the only surface analytics may query (spec §4):
  *   - was_skipped: early years lack real skip data — the spec expected null
  *     (→ COALESCE), but this export backfills skipped=false, which a COALESCE
  *     never catches. OR-ing the forward-button reason_end covers both export
  *     variants so skip analytics don't undercount.
  *   - started_local: ts is playback STOP time in UTC; subtract ms_played and
  *     convert to local tz so time-of-day buckets land in the right hour.
+ *
+ * Materialized as a TABLE, not a VIEW: as a view, every scan re-ran the per-row
+ * `AT TIME ZONE` ICU conversion and the was_skipped expression across the whole
+ * log. Detail pages fire ~20 aggregations over listens per open, so that cost
+ * was paid thousands of times per navigation. Computing the derived columns once
+ * here turns each later scan into a plain columnar read. The history is
+ * write-once per session, so the table never goes stale under us; it is rebuilt
+ * on import, snapshot restore, and timezone change.
  */
 export async function createListensView(tz: string): Promise<void> {
 	if (!isValidTimezone(tz)) throw new Error(`invalid timezone ${tz}`);
-	await query(`CREATE OR REPLACE VIEW listens AS
+	await query(`CREATE OR REPLACE TABLE listens AS
 		SELECT *,
 			ms_played >= 30000                       AS counts_as_stream,
 			(COALESCE(skipped, false) OR reason_end = 'fwdbtn') AS was_skipped,
 			(ts - to_milliseconds(ms_played))
 				AT TIME ZONE 'UTC' AT TIME ZONE ${sqlString(tz)}  AS started_local
 		FROM plays`);
+	// Point-lookup index for the per-track `WHERE track_uri = ?` filters the
+	// track-detail prefilter and its helpers lean on.
+	await query(
+		"CREATE INDEX IF NOT EXISTS idx_listens_track ON listens (track_uri)",
+	);
+	// The cached library-wide constants (skip-rate baseline, lifetime rank map)
+	// were derived from the table that just got rebuilt — drop them.
+	resetTrackCaches();
 }

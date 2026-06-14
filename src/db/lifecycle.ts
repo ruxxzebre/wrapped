@@ -155,13 +155,13 @@ export async function recreateListensView(tz: string): Promise<void> {
 }
 
 /**
- * Wipes the library: drops the listens view and plays table from the in-memory
+ * Wipes the library: drops the listens and plays tables from the in-memory
  * database and removes the OPFS snapshot so it can't be restored on reload.
  * After this `ensureReady` reports not-ready, returning the app to the welcome
  * screen. The caller must invalidate all queries afterwards.
  */
 export async function clearDatabase(): Promise<void> {
-	await query("DROP VIEW IF EXISTS listens");
+	await query("DROP TABLE IF EXISTS listens");
 	await query("DROP TABLE IF EXISTS plays");
 	await deleteSnapshot();
 	playsLoaded = false;
