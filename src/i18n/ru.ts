@@ -30,8 +30,117 @@ export const ru: Translation = {
 	"nav.group.explore": "Исследовать",
 	"nav.group.system": "Система",
 	"nav.insights.overview": "Обзор",
+	"nav.insights.taste": "Вкус",
+	"nav.insights.habits": "Привычки",
+	"nav.insights.events": "События",
+	"nav.insights.devices": "Устройства",
 	"insights.dashboardTitle": "Аналитика",
 	"insights.empty": "Скоро появятся новые инсайты.",
+	"insights.notEnough": "Данных пока недостаточно.",
+
+	// Overview headline cards
+	"insights.overview.lede":
+		"Глубже о вашем прослушивании — форма вкуса, ежедневные привычки, примечательные события и устройства за всем этим. Выберите вкладку выше.",
+	"insights.overview.gini": "концентрация вкуса",
+	"insights.overview.longestHiatus": "самая долгая пауза",
+	"insights.overview.nightShare": "прослушивания после полуночи",
+
+	// --- §24 Range index ---------------------------------------------------
+	"insights.range.title": "Индекс диапазона",
+	"insights.range.lede":
+		"Какая доля прослушивания приходится на горстку треков. 0 — совершенно равномерно; ближе к 1 — несколько песен доминируют.",
+	"insights.range.gini": "концентрация (Gini)",
+	"insights.range.top1": "доля топ 1%",
+	"insights.range.byYear": "Концентрация по годам",
+	"insights.range.giniLine": "Gini",
+	"insights.range.top1Line": "доля топ 1%",
+
+	// --- §17 Loyal companions ---------------------------------------------
+	"insights.companions.title": "Верные спутники",
+	"insights.companions.lede":
+		"Воспроизводились в каждом году истории — константы, которые никогда не уходили.",
+	"insights.companions.empty":
+		"Нужно не менее 3 лет данных, чтобы найти ваши константы.",
+
+	// --- §15 Seasonal ------------------------------------------------------
+	"insights.seasonal.title": "Песни сезонов",
+	"insights.seasonal.lede":
+		"Треки, прослушивания которых концентрируются в одно время года — ваши летние гимны и зимние песни.",
+	"insights.seasonal.peak": "пик",
+	"insights.seasonal.concentration": "привязаны к сезону",
+	"insights.seasonal.empty":
+		"Нужно не менее 2 лет данных, чтобы заметить сезонность.",
+
+	// --- §21 Chronotype ----------------------------------------------------
+	"insights.chronotype.title": "Смещение хронотипа",
+	"insights.chronotype.lede":
+		"Типичный час прослушивания по годам — вы становитесь более ночным слушателем?",
+	"insights.chronotype.meanHour": "центр тяжести",
+	"insights.chronotype.nightShare": "до 6 утра",
+	"insights.chronotype.meanLine": "средний час",
+
+	// --- §20 Weekend vs weekday -------------------------------------------
+	"insights.weekend.title": "Будничное и выходное я",
+	"insights.weekend.lede": "Ваше будничное я отличается от выходного на {pct}.",
+	"insights.weekend.weekday": "Будни",
+	"insights.weekend.weekend": "Выходные",
+
+	// --- §16 Attention span ------------------------------------------------
+	"insights.attention.title": "Концентрация внимания",
+	"insights.attention.lede":
+		"Вы ещё дослушиваете песни? Средняя доля каждого трека, которую вы действительно воспроизводите, по годам.",
+	"insights.attention.completion": "среднее завершение",
+	"insights.attention.median": "медианное прослушивание",
+	"insights.attention.completionLine": "завершённость",
+
+	// --- §25 Hiatuses ------------------------------------------------------
+	"insights.hiatuses.title": "Паузы",
+	"insights.hiatuses.lede":
+		"Промежутки, когда вы почти не открывали Spotify — ваши самые долгие молчания. Пробел в экспорте может выглядеть так же, как настоящий перерыв.",
+
+	// --- §18 Rediscoveries -------------------------------------------------
+	"insights.rediscoveries.title": "Переоткрытия",
+	"insights.rediscoveries.lede":
+		"Треки, которые замолчали на месяцы, а потом вернулись с новой силой.",
+	"insights.rediscoveries.revival": "{n} прослуш. за 30 дней",
+
+	// --- §19 On repeat -----------------------------------------------------
+	"insights.loops.title": "На повторе",
+	"insights.loops.lede":
+		"Последовательные прослушивания одного и того же трека подряд — когда вы действительно ставили его на повтор.",
+	"insights.loops.run": "{n}× подряд",
+
+	// --- §22 Device archaeology -------------------------------------------
+	"insights.devices.title": "Археология устройств",
+	"insights.devices.lede":
+		"Аппаратная история, скрытая в поле платформы — когда появилось и исчезло каждое семейство устройств. Грубо намеренно: точный user-agent никогда не импортируется.",
+	"insights.devices.share": "доля",
+
+	// --- §23 Incognito & offline ------------------------------------------
+	"insights.privacy.title": "Инкогнито и офлайн",
+	"insights.privacy.lede":
+		"Два флага, которые никто не показывает: приватные сессии, которые никогда не попадали в ваш профиль, и то, что вы скачали в дорогу.",
+	"insights.privacy.incognito": "прослуш. в инкогнито",
+	"insights.privacy.offline": "офлайн прослуш.",
+	"insights.privacy.topOffline": "Топ загрузок (офлайн)",
+	"insights.privacy.topIncognito": "Топ треков в инкогнито",
+	"insights.privacy.none": "Приватных или офлайн прослушиваний не записано.",
+
+	// --- shared insight columns -------------------------------------------
+	"insights.col.years": "годы",
+	"insights.col.peak": "пиковый месяц",
+	"insights.col.locked": "привязан",
+	"insights.col.gap": "молчание",
+	"insights.col.comeback": "возвращение",
+	"insights.col.revival": "возрождение",
+	"insights.col.run": "повтор",
+	"insights.col.started": "начало",
+	"insights.col.device": "устройство",
+	"insights.col.first": "первый",
+	"insights.col.last": "последний",
+	"insights.col.from": "с",
+	"insights.col.to": "по",
+	"insights.col.days": "дни",
 
 	// --- shared controls ---------------------------------------------------
 	"controls.rankBy": "сортировать по",
@@ -77,6 +186,15 @@ export const ru: Translation = {
 	"count.days_one": "{n} день",
 	"count.days_few": "{n} дня",
 	"count.days_many": "{n} дней",
+	"count.years_one": "{n} год",
+	"count.years_few": "{n} года",
+	"count.years_many": "{n} лет",
+	"count.months_one": "{n} месяц",
+	"count.months_few": "{n} месяца",
+	"count.months_many": "{n} месяцев",
+	"count.hours_one": "{n} час",
+	"count.hours_few": "{n} часа",
+	"count.hours_many": "{n} часов",
 
 	// --- status / splash ---------------------------------------------------
 	"status.loading": "загрузка…",
@@ -260,9 +378,35 @@ export const ru: Translation = {
 	"story.faded.line":
 		"Вы не включали {track} с {since}. Это был ваш гимн в {peak}.",
 	"story.faded.foot": "{plays} прослушиваний в том году · {artist}",
+	"story.crossroads.eyebrow": "Передохните",
+	"story.crossroads.line":
+		"Это лишь первая половина. Листайте дальше, {more} впереди.",
+	"story.crossroads.more": "больше вашей истории",
+	"story.crossroads.foot":
+		"Или выйдите сейчас: откройте {summary} либо погрузитесь в {insights}.",
+	"story.crossroads.summary": "Обзор",
+	"story.crossroads.insights": "Аналитику",
+	"story.companion.eyebrow": "Всё ещё рядом",
+	"story.companion.line":
+		"Сквозь всё это {artist} оставался с вами уже {years} и продолжает.",
+	"story.companion.foot": "{plays} · в вашей ротации с {firstYear}",
+	"story.comeback.eyebrow": "Вы вернулись",
+	"story.comeback.line":
+		"Вы оставили {track} в тишине на {gap}, а потом снова не могли остановиться.",
+	"story.comeback.foot": "Возврат {date} · {plays} за месяц после · {artist}",
+	"story.marathon.eyebrow": "Однажды вы не остановились",
+	"story.marathon.line": "{date} вы слушали {hours}.",
+	"story.marathon.foot": "{weekday} · {streams} треков · в основном {artist}",
+	"story.devotion.eyebrow": "Ни разу не пропустили",
+	"story.devotion.line":
+		"Вы слушали {track} {times} и каждый раз давали ему доиграть до конца.",
+	"story.devotion.foot": "{artist} · хотя остальное пропускали на {skip}",
 	"story.closing.eyebrow": "Вот и вся история",
 	"story.closing.line": "Цифры за каждым битом ждут вас в разделе {summary}.",
 	"story.closing.summary": "Обзор",
+	"story.closing.foot":
+		"Хотите увидеть закономерности? Ваша {insights} копнёт глубже.",
+	"story.closing.insights": "Аналитика",
 	"story.closing.cta": "Перейти к обзору →",
 
 	// --- completion bands --------------------------------------------------

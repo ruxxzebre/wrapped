@@ -13,6 +13,7 @@ import type {
 	Metric,
 	MonthCount,
 	OnThisDay,
+	Period,
 	PlayRow,
 	PlaysPage,
 	PrivacyStats,
@@ -22,7 +23,11 @@ import type {
 	SeasonalTrack,
 	SplitArtist,
 	Story,
+	StoryComeback,
+	StoryCompanion,
+	StoryDevotion,
 	StoryFaded,
+	StoryMarathon,
 	StoryObsession,
 	StoryOrigin,
 	StoryPersona,
@@ -33,7 +38,6 @@ import type {
 	TrackRow,
 	TracksPage,
 	WeekendSplit,
-	Window,
 	YearArtistDelta,
 	YearCount,
 	YearReview,
@@ -61,14 +65,14 @@ function plusDay(date: string): string {
 }
 
 /** Appends ts-window conditions and their args. */
-function windowWhere(w: Window, conds: string[], args: unknown[]): void {
-	if (w.from) {
+function periodWhere(p: Period, conds: string[], args: unknown[]): void {
+	if (p.from) {
 		conds.push("ts >= CAST(? AS TIMESTAMP)");
-		args.push(w.from);
+		args.push(p.from);
 	}
-	if (w.to) {
+	if (p.to) {
 		conds.push("ts < CAST(? AS TIMESTAMP)");
-		args.push(plusDay(w.to));
+		args.push(plusDay(p.to));
 	}
 }
 
@@ -225,28 +229,146 @@ async function storyFaded(): Promise<StoryFaded | null> {
 	return rows[0] ?? null;
 }
 
+// The artist who has stayed the longest: present across the widest span of
+// calendar years (loyalty over time), tie-broken by hours. Needs ≥3 years of
+// span so "all those years" actually means something.
+async function storyCompanion(): Promise<StoryCompanion | null> {
+	const rows = await query<StoryCompanion>(`
+		SELECT artist_name                  AS artist,
+		       count(*)                     AS plays,
+		       sum(ms_played) / 3600000.0   AS hours,
+		       max(year(started_local)) - min(year(started_local)) + 1 AS years,
+		       min(year(started_local))     AS first_year
+		FROM listens WHERE artist_name IS NOT NULL
+		GROUP BY artist_name
+		HAVING count(DISTINCT year(started_local)) >= 3
+		   AND max(year(started_local)) - min(year(started_local)) + 1 >= 3
+		ORDER BY count(DISTINCT year(started_local)) DESC, hours DESC LIMIT 1`);
+	return rows[0] ?? null;
+}
+
+// A track that went quiet for 6+ months and then came roaring back with 5+
+// plays in the next 30 days — the mirror of `faded`. Picks the longest such
+// silence so the return hits hardest. (Same shape as the §18 insight, distilled
+// to one hero record.)
+async function storyComeback(): Promise<StoryComeback | null> {
+	const rows = await query<StoryComeback>(`
+		WITH g AS (
+			SELECT track_uri, ts,
+			       COALESCE(track_name, '?')  AS name,
+			       COALESCE(artist_name, '?') AS artist,
+			       date_diff('day', LAG(ts) OVER (PARTITION BY track_uri ORDER BY ts), ts)
+			           AS gap_days,
+			       count(*) OVER (
+			           PARTITION BY track_uri ORDER BY ts
+			           RANGE BETWEEN CURRENT ROW AND INTERVAL '30 days' FOLLOWING
+			       ) AS plays_30d
+			FROM listens
+		)
+		SELECT track_uri, name, artist,
+		       strftime(ts, '%Y-%m-%d') AS date,
+		       gap_days, plays_30d
+		FROM g
+		WHERE gap_days >= 180 AND plays_30d >= 5
+		ORDER BY gap_days DESC, plays_30d DESC LIMIT 1`);
+	return rows[0] ?? null;
+}
+
+// Your single most-consumed calendar day, and the artist who led it. Only counts
+// when the day clears 6 hours so a thin library doesn't surface an ordinary
+// afternoon as a marathon.
+async function storyMarathon(): Promise<StoryMarathon | null> {
+	const day = (
+		await query<{
+			date: string;
+			weekday: string;
+			hours: number;
+			streams: number;
+		}>(`
+		SELECT strftime(CAST(started_local AS DATE), '%Y-%m-%d') AS date,
+		       dayname(started_local)                            AS weekday,
+		       sum(ms_played) / 3600000.0                        AS hours,
+		       count(*) FILTER (WHERE counts_as_stream)          AS streams
+		FROM listens
+		GROUP BY 1, 2 HAVING sum(ms_played) / 3600000.0 >= 6
+		ORDER BY hours DESC LIMIT 1`)
+	)[0];
+	if (!day) return null;
+
+	const top = (
+		await query<{ artist: string }>(
+			`
+		SELECT COALESCE(artist_name, '?') AS artist
+		FROM listens WHERE CAST(started_local AS DATE) = CAST(? AS DATE)
+		GROUP BY artist_name ORDER BY count(*) DESC LIMIT 1`,
+			[day.date],
+		)
+	)[0];
+	return { ...day, artist: top?.artist ?? "?" };
+}
+
+// A track you played many times and never once skipped — the counter-confession
+// to the persona's skip rate. The overall skip ratio rides along for contrast.
+async function storyDevotion(): Promise<StoryDevotion | null> {
+	const rows = await query<StoryDevotion>(`
+		SELECT track_uri,
+		       COALESCE(max(track_name), '?')  AS name,
+		       COALESCE(max(artist_name), '?') AS artist,
+		       count(*)                        AS plays,
+		       (SELECT avg(CASE WHEN was_skipped THEN 1.0 ELSE 0.0 END) FROM listens)
+		           AS skip_ratio
+		FROM listens
+		GROUP BY track_uri
+		HAVING count(*) >= 25
+		   AND sum(CASE WHEN was_skipped THEN 1 ELSE 0 END) = 0
+		ORDER BY count(*) DESC LIMIT 1`);
+	return rows[0] ?? null;
+}
+
 export async function story(): Promise<Story> {
-	const [origin, persona, obsession, faded] = await Promise.all([
+	const [
+		origin,
+		persona,
+		obsession,
+		faded,
+		companion,
+		comeback,
+		marathon,
+		devotion,
+	] = await Promise.all([
 		storyOrigin(),
 		storyPersona(),
 		storyObsession(),
 		storyFaded(),
+		storyCompanion(),
+		storyComeback(),
+		storyMarathon(),
+		storyDevotion(),
 	]);
-	return { origin, persona, obsession, faded };
+	return {
+		origin,
+		persona,
+		obsession,
+		faded,
+		companion,
+		comeback,
+		marathon,
+		devotion,
+	};
 }
 
 // --- top.go -----------------------------------------------------------------
 
 export async function topTracks(
 	metric: Metric,
-	w: Window,
+	p: Period,
 	minMs: number,
 	limit: number,
 ): Promise<TopTrack[]> {
 	console.log("get top tracks");
 	const conds = ["ms_played >= ?"];
 	const args: unknown[] = [minMs];
-	windowWhere(w, conds, args);
+	periodWhere(p, conds, args);
 	args.push(limit);
 	return query<TopTrack>(
 		`
@@ -266,13 +388,13 @@ export async function topTracks(
 
 export async function topArtists(
 	metric: Metric,
-	w: Window,
+	p: Period,
 	minMs: number,
 	limit: number,
 ): Promise<TopArtist[]> {
 	const conds = ["ms_played >= ?", "artist_name IS NOT NULL"];
 	const args: unknown[] = [minMs];
-	windowWhere(w, conds, args);
+	periodWhere(p, conds, args);
 	args.push(limit);
 	return query<TopArtist>(
 		`
@@ -293,10 +415,10 @@ export async function topArtists(
 
 // Patterns bucket on started_local: playback START time converted to local tz
 // (ts alone is the UTC stop time and lands long tracks in the wrong hour).
-async function pattern(bucketExpr: string, w: Window): Promise<Bucket[]> {
+async function pattern(bucketExpr: string, p: Period): Promise<Bucket[]> {
 	const conds = ["ms_played >= ?"];
 	const args: unknown[] = [30000];
-	windowWhere(w, conds, args);
+	periodWhere(p, conds, args);
 	return query<Bucket>(
 		`
 		SELECT ${bucketExpr}              AS bucket,
@@ -310,8 +432,8 @@ async function pattern(bucketExpr: string, w: Window): Promise<Bucket[]> {
 	);
 }
 
-export const hourly = (w: Window) => pattern("hour(started_local)", w);
-export const weekly = (w: Window) => pattern("isodow(started_local)", w);
+export const hourly = (p: Period) => pattern("hour(started_local)", p);
+export const weekly = (p: Period) => pattern("isodow(started_local)", p);
 
 // --- tracks.go ---------------------------------------------------------------
 
@@ -344,7 +466,7 @@ const PLAYS_LIMIT = 200;
 export async function plays(
 	cursor: string | undefined,
 	search: string,
-	w: Window,
+	p: Period,
 ): Promise<PlaysPage> {
 	const conds = ["1=1"];
 	const args: unknown[] = [];
@@ -355,7 +477,7 @@ export async function plays(
 		);
 		args.push(pat, pat);
 	}
-	windowWhere(w, conds, args);
+	periodWhere(p, conds, args);
 	if (cursor) {
 		const c = decodeCursor(cursor);
 		conds.push(
@@ -802,10 +924,10 @@ export async function year(y: number): Promise<YearReview> {
 // (empty when the window is all-time) and `args` are its bind values. A query
 // that scans listens more than once must include `args` once per scan, in SQL
 // order.
-function win(w: Window): { where: string; args: unknown[] } {
+function win(p: Period): { where: string; args: unknown[] } {
 	const conds: string[] = [];
 	const args: unknown[] = [];
-	windowWhere(w, conds, args);
+	periodWhere(p, conds, args);
 	return { where: conds.join(" AND "), args };
 }
 
@@ -818,11 +940,11 @@ const andOf = (where: string) => (where ? ` AND ${where}` : "");
 // direction mapped back to a 0-based month. Requires ≥2 distinct years so a
 // single binge can't masquerade as a season.
 export async function seasonal(
-	w: Window,
+	p: Period,
 	minPlays = 25,
 	limit = 24,
 ): Promise<SeasonalTrack[]> {
-	const { where, args } = win(w);
+	const { where, args } = win(p);
 	return query<SeasonalTrack>(
 		`
 		WITH m AS (
@@ -851,8 +973,8 @@ export async function seasonal(
 // §16 Attention span. Track length isn't in the export, so the longest play of
 // a track stands in for its full length; completion is each play over that,
 // clamped to 1. Trended per year alongside the median play length.
-export async function attention(w: Window): Promise<AttentionYear[]> {
-	const { where, args } = win(w);
+export async function attention(p: Period): Promise<AttentionYear[]> {
+	const { where, args } = win(p);
 	return query<AttentionYear>(
 		`
 		WITH t AS (
@@ -874,10 +996,10 @@ export async function attention(w: Window): Promise<AttentionYear[]> {
 // anything.
 export async function companions(
 	kind: "track" | "artist",
-	w: Window,
+	p: Period,
 	limit = 50,
 ): Promise<Companion[]> {
-	const { where, args } = win(w);
+	const { where, args } = win(p);
 	if (kind === "artist") {
 		return query<Companion>(
 			`
@@ -923,12 +1045,12 @@ export async function companions(
 // revival, not a one-off nostalgic replay). The 30-day forward count uses a
 // RANGE window frame on the per-track timeline.
 export async function rediscoveries(
-	w: Window,
+	p: Period,
 	gapMonths = 6,
 	revivalPlays = 5,
 	limit = 30,
 ): Promise<Rediscovery[]> {
-	const { where, args } = win(w);
+	const { where, args } = win(p);
 	return query<Rediscovery>(
 		`
 		WITH g AS (
@@ -959,11 +1081,11 @@ export async function rediscoveries(
 // track. A run starts whenever the previous play was a different track; a
 // running sum of that flag is the run id, and runs of minRun+ are the loops.
 export async function loops(
-	w: Window,
+	p: Period,
 	minRun = 3,
 	limit = 30,
 ): Promise<Loop[]> {
-	const { where, args } = win(w);
+	const { where, args } = win(p);
 	return query<Loop>(
 		`
 		WITH flagged AS (
@@ -993,8 +1115,8 @@ export async function loops(
 
 // §20 Weekend vs weekday self. Top artists for each side, plus one divergence
 // number: 1 − Jaccard overlap of the two top-50 artist sets.
-export async function weekendSplit(w: Window): Promise<WeekendSplit> {
-	const { where, args } = win(w);
+export async function weekendSplit(p: Period): Promise<WeekendSplit> {
+	const { where, args } = win(p);
 	const top = (weekend: boolean) =>
 		query<SplitArtist>(
 			`
@@ -1035,8 +1157,8 @@ export async function weekendSplit(w: Window): Promise<WeekendSplit> {
 // §21 Chronotype drift. Circular mean of the local start hour per year (the
 // circular mean handles the midnight wraparound a plain avg(hour) botches),
 // plus the share of plays before 06:00.
-export async function chronotype(w: Window): Promise<ChronotypeYear[]> {
-	const { where, args } = win(w);
+export async function chronotype(p: Period): Promise<ChronotypeYear[]> {
+	const { where, args } = win(p);
 	return query<ChronotypeYear>(
 		`
 		SELECT year(started_local) AS year,
@@ -1070,8 +1192,8 @@ const DEVICE_FAMILY = `CASE
 	ELSE 'Other'
 END`;
 
-export async function devices(w: Window): Promise<Device[]> {
-	const { where, args } = win(w);
+export async function devices(p: Period): Promise<Device[]> {
+	const { where, args } = win(p);
 	return query<Device>(
 		`
 		SELECT ${DEVICE_FAMILY} AS device,
@@ -1088,8 +1210,8 @@ export async function devices(w: Window): Promise<Device[]> {
 // §23 Incognito & offline listening. Both are plain boolean filters; the top
 // lists surface what you hid (incognito) and what you downloaded for the road
 // (offline). incognito_mode may be NULL on data imported before it was ingested.
-export async function privacy(w: Window): Promise<PrivacyStats> {
-	const { where, args } = win(w);
+export async function privacy(p: Period): Promise<PrivacyStats> {
+	const { where, args } = win(p);
 	const head = one(
 		await query<Omit<PrivacyStats, "topOffline" | "topIncognito">>(
 			`
@@ -1159,8 +1281,8 @@ async function rangeFor(
 	);
 }
 
-export async function rangeIndex(w: Window): Promise<RangeIndex> {
-	const { where, args } = win(w);
+export async function rangeIndex(p: Period): Promise<RangeIndex> {
+	const { where, args } = win(p);
 	const [all, years] = await Promise.all([
 		rangeFor("'all'", where, args),
 		rangeFor("CAST(year(started_local) AS VARCHAR)", where, args),
@@ -1172,11 +1294,11 @@ export async function rangeIndex(w: Window): Promise<RangeIndex> {
 // previous active day; keep gaps of minDays+. The inverse read of the streak
 // query.
 export async function hiatuses(
-	w: Window,
+	p: Period,
 	minDays = 7,
 	limit = 30,
 ): Promise<Hiatus[]> {
-	const { where, args } = win(w);
+	const { where, args } = win(p);
 	return query<Hiatus>(
 		`
 		WITH days AS (

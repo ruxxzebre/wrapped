@@ -1,7 +1,7 @@
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { useSearch } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import type { PlayRow, Window } from "../api";
+import type { Period, PlayRow } from "../api";
 import { WindowPicker } from "../controls";
 import { fmtDateTime, fmtDuration } from "../format";
 import { type TFunction, useT } from "../i18n";
@@ -72,20 +72,20 @@ export default function PlayLog() {
 	// The URL (e.g. a Calendar day click) provides the window until the user
 	// picks one; a new URL filter resets the pick (render-time adjust, no
 	// effect, so there's no flash of the stale window).
-	const [picked, setWindow] = useState<Window | null>(null);
+	const [picked, setPeriod] = useState<Period | null>(null);
 	const [prevParams, setPrevParams] = useState({ qFrom, qTo });
 	if (prevParams.qFrom !== qFrom || prevParams.qTo !== qTo) {
 		setPrevParams({ qFrom, qTo });
-		setWindow(null);
+		setPeriod(null);
 	}
-	const window = picked ?? { from: qFrom, to: qTo };
+	const period = picked ?? { from: qFrom, to: qTo };
 
 	useEffect(() => {
 		const t = setTimeout(() => setDebounced(search), 300);
 		return () => clearTimeout(t);
 	}, [search]);
 
-	const query = useInfiniteQuery(q.plays(debounced, window));
+	const query = useInfiniteQuery(q.plays(debounced, period));
 
 	const rows = useMemo(
 		() => query.data?.pages.flatMap((p) => p.items) ?? [],
@@ -105,7 +105,7 @@ export default function PlayLog() {
 						width="16rem"
 					/>
 				</Field>
-				<WindowPicker value={window} onChange={setWindow} />
+				<WindowPicker value={period} onChange={setPeriod} />
 			</ControlsBar>
 
 			<VirtualTable

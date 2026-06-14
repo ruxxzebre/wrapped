@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
-import type { Metric, TopArtist, Window } from "../api";
+import type { Metric, Period, TopArtist } from "../api";
 import { MetricToggle, WindowPicker } from "../controls";
 import { fmtHours, fmtInt } from "../format";
 import { type TFunction, useT } from "../i18n";
@@ -52,12 +52,12 @@ const columns = (t: TFunction): Column<TopArtist>[] => [
 export default function TopArtists() {
 	const t = useT();
 	const [metric, setMetric] = useState<Metric>("plays");
-	const [window, setWindow] = useState<Window>({});
+	const [period, setPeriod] = useState<Period>({});
 	const [limit, setLimit] = useState(100);
 	const COLUMNS = useMemo(() => columns(t), [t]);
 
 	const { data, error } = useQuery({
-		...q.topArtists(metric, window, limit),
+		...q.topArtists(metric, period, limit),
 		placeholderData: (prev) => prev,
 	});
 
@@ -65,7 +65,7 @@ export default function TopArtists() {
 		<>
 			<ControlsBar>
 				<MetricToggle value={metric} onChange={setMetric} />
-				<WindowPicker value={window} onChange={setWindow} />
+				<WindowPicker value={period} onChange={setPeriod} />
 				<Field label={t("controls.limit")}>
 					<Select
 						value={limit}

@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
-import type { Metric, Window } from "./api";
+import type { Metric, Period } from "./api";
 import { useT } from "./i18n";
 import { q } from "./queries";
 import { Field, Input, Select, ToggleGroup } from "./ui";
@@ -27,11 +27,11 @@ export function MetricToggle({
 	);
 }
 
-function windowForYear(year: number): Window {
+function windowForYear(year: number): Period {
 	return { from: `${year}-01-01`, to: `${year}-12-31` };
 }
 
-function matchYear(value: Window): number | null {
+function matchYear(value: Period): number | null {
 	const m = value.from?.match(/^(\d{4})-01-01$/);
 	if (m && value.to === `${m[1]}-12-31`) return Number(m[1]);
 	return null;
@@ -41,8 +41,8 @@ export function WindowPicker({
 	value,
 	onChange,
 }: {
-	value: Window;
-	onChange: (w: Window) => void;
+	value: Period;
+	onChange: (p: Period) => void;
 }) {
 	const t = useT();
 	const { data: summary } = useQuery(q.summary());

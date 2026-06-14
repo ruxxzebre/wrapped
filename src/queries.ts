@@ -1,5 +1,5 @@
 import { infiniteQueryOptions, queryOptions } from "@tanstack/react-query";
-import { api, type Metric, type Window } from "./api";
+import { api, type Metric, type Period } from "./api";
 
 // Single source of truth for every query's key + fetcher. Route loaders and
 // view hooks both consume these factories, so a loader can never warm a key the
@@ -47,96 +47,96 @@ export const q = {
 
 	// minMs is fixed at 30000 in the fetcher and intentionally absent from the
 	// key — mirrors the original TopArtists query so the cache aligns.
-	topArtists: (metric: Metric, window: Window, limit: number) =>
+	topArtists: (metric: Metric, period: Period, limit: number) =>
 		queryOptions({
-			queryKey: ["topArtists", metric, window, limit] as const,
-			queryFn: () => api.topArtists(metric, window, 30000, limit),
+			queryKey: ["topArtists", metric, period, limit] as const,
+			queryFn: () => api.topArtists(metric, period, 30000, limit),
 		}),
-	topTracks: (metric: Metric, window: Window, minMs: number, limit: number) =>
+	topTracks: (metric: Metric, period: Period, minMs: number, limit: number) =>
 		queryOptions({
-			queryKey: ["topTracks", metric, window, minMs, limit] as const,
-			queryFn: () => api.topTracks(metric, window, minMs, limit),
-		}),
-
-	hourly: (window: Window) =>
-		queryOptions({
-			queryKey: ["hourly", window] as const,
-			queryFn: () => api.hourly(window),
-		}),
-	weekly: (window: Window) =>
-		queryOptions({
-			queryKey: ["weekly", window] as const,
-			queryFn: () => api.weekly(window),
+			queryKey: ["topTracks", metric, period, minMs, limit] as const,
+			queryFn: () => api.topTracks(metric, period, minMs, limit),
 		}),
 
-	plays: (search: string, window: Window) =>
+	hourly: (period: Period) =>
+		queryOptions({
+			queryKey: ["hourly", period] as const,
+			queryFn: () => api.hourly(period),
+		}),
+	weekly: (period: Period) =>
+		queryOptions({
+			queryKey: ["weekly", period] as const,
+			queryFn: () => api.weekly(period),
+		}),
+
+	plays: (search: string, period: Period) =>
 		infiniteQueryOptions({
-			queryKey: ["plays", search, window] as const,
-			queryFn: ({ pageParam }) => api.plays(pageParam, search, window),
+			queryKey: ["plays", search, period] as const,
+			queryFn: ({ pageParam }) => api.plays(pageParam, search, period),
 			initialPageParam: undefined as string | undefined,
 			getNextPageParam: (last) => last.next_cursor ?? undefined,
 		}),
 
-	// Compare's two columns each hold a top-N of a window, normalised to a shared
+	// Compare's two columns each hold a top-N of a period, normalised to a shared
 	// shape so artists and tracks join on one key.
-	compareTop: (entity: CompareEntity, metric: Metric, window: Window) =>
+	compareTop: (entity: CompareEntity, metric: Metric, period: Period) =>
 		queryOptions({
-			queryKey: [entity, "cmp", metric, window] as const,
-			queryFn: () => fetchTop(entity, metric, window),
+			queryKey: [entity, "cmp", metric, period] as const,
+			queryFn: () => fetchTop(entity, metric, period),
 		}),
 
 	// --- Insights (ideas.md §15–§25) — keyed by the shared period filter ----
-	seasonal: (period: Window) =>
+	seasonal: (period: Period) =>
 		queryOptions({
 			queryKey: ["seasonal", period] as const,
 			queryFn: () => api.seasonal(period),
 		}),
-	attention: (period: Window) =>
+	attention: (period: Period) =>
 		queryOptions({
 			queryKey: ["attention", period] as const,
 			queryFn: () => api.attention(period),
 		}),
-	companions: (kind: "track" | "artist", period: Window) =>
+	companions: (kind: "track" | "artist", period: Period) =>
 		queryOptions({
 			queryKey: ["companions", kind, period] as const,
 			queryFn: () => api.companions(kind, period),
 		}),
-	rediscoveries: (period: Window) =>
+	rediscoveries: (period: Period) =>
 		queryOptions({
 			queryKey: ["rediscoveries", period] as const,
 			queryFn: () => api.rediscoveries(period),
 		}),
-	loops: (period: Window) =>
+	loops: (period: Period) =>
 		queryOptions({
 			queryKey: ["loops", period] as const,
 			queryFn: () => api.loops(period),
 		}),
-	weekendSplit: (period: Window) =>
+	weekendSplit: (period: Period) =>
 		queryOptions({
 			queryKey: ["weekendSplit", period] as const,
 			queryFn: () => api.weekendSplit(period),
 		}),
-	chronotype: (period: Window) =>
+	chronotype: (period: Period) =>
 		queryOptions({
 			queryKey: ["chronotype", period] as const,
 			queryFn: () => api.chronotype(period),
 		}),
-	devices: (period: Window) =>
+	devices: (period: Period) =>
 		queryOptions({
 			queryKey: ["devices", period] as const,
 			queryFn: () => api.devices(period),
 		}),
-	privacy: (period: Window) =>
+	privacy: (period: Period) =>
 		queryOptions({
 			queryKey: ["privacy", period] as const,
 			queryFn: () => api.privacy(period),
 		}),
-	rangeIndex: (period: Window) =>
+	rangeIndex: (period: Period) =>
 		queryOptions({
 			queryKey: ["rangeIndex", period] as const,
 			queryFn: () => api.rangeIndex(period),
 		}),
-	hiatuses: (period: Window) =>
+	hiatuses: (period: Period) =>
 		queryOptions({
 			queryKey: ["hiatuses", period] as const,
 			queryFn: () => api.hiatuses(period),
@@ -161,10 +161,10 @@ const COMPARE_LIMIT = 250; // top-N of each window; entries outside read as abse
 async function fetchTop(
 	entity: CompareEntity,
 	metric: Metric,
-	window: Window,
+	period: Period,
 ): Promise<CompareTop[]> {
 	if (entity === "artists") {
-		const rows = await api.topArtists(metric, window, 30000, COMPARE_LIMIT);
+		const rows = await api.topArtists(metric, period, 30000, COMPARE_LIMIT);
 		return rows.map((r) => ({
 			key: r.artist,
 			name: r.artist,
@@ -172,7 +172,7 @@ async function fetchTop(
 			hours: r.hours,
 		}));
 	}
-	const rows = await api.topTracks(metric, window, 30000, COMPARE_LIMIT);
+	const rows = await api.topTracks(metric, period, 30000, COMPARE_LIMIT);
 	return rows.map((r) => ({
 		key: r.track_uri,
 		name: r.name,

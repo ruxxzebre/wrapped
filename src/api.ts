@@ -71,7 +71,7 @@ export type PlaysPage = { items: PlayRow[]; next_cursor: string | null };
 
 export type Metric = "plays" | "ms";
 
-export type Window = { from?: string; to?: string };
+export type Period = { from?: string; to?: string };
 
 export type LabelCount = { label: string; plays: number };
 export type MonthCount = { month: string; plays: number; hours: number };
@@ -158,6 +158,43 @@ export type StoryFaded = {
 	last_play: string;
 };
 
+// The artist who stayed: present across the widest span of years.
+export type StoryCompanion = {
+	artist: string;
+	plays: number;
+	hours: number;
+	years: number; // span from first to last year, inclusive
+	first_year: number;
+};
+
+// A track you let go quiet, then came roaring back to (mirror of `faded`).
+export type StoryComeback = {
+	track_uri: string;
+	name: string;
+	artist: string;
+	date: string; // the comeback play, YYYY-MM-DD
+	gap_days: number; // silence before it
+	plays_30d: number; // plays in the 30 days after
+};
+
+// Your single most-consumed calendar day — total immersion.
+export type StoryMarathon = {
+	date: string;
+	weekday: string;
+	hours: number;
+	streams: number;
+	artist: string; // the artist that led that day
+};
+
+// A track you played many times and never once skipped — pure commitment.
+export type StoryDevotion = {
+	track_uri: string;
+	name: string;
+	artist: string;
+	plays: number;
+	skip_ratio: number; // your overall skip rate, for contrast
+};
+
 // Every beat but the persona may be null when the library is too thin to
 // support it; the view simply omits that scene.
 export type Story = {
@@ -165,6 +202,10 @@ export type Story = {
 	persona: StoryPersona | null;
 	obsession: StoryObsession | null;
 	faded: StoryFaded | null;
+	companion: StoryCompanion | null;
+	comeback: StoryComeback | null;
+	marathon: StoryMarathon | null;
+	devotion: StoryDevotion | null;
 };
 
 export type RankDelta = { rank: number; prev_rank: number | null };
@@ -306,21 +347,21 @@ export const api = {
 	summary: () => q.summary(),
 	story: () => q.story(),
 
-	topTracks: (metric: Metric, w: Window, minMs: number, limit: number) =>
-		q.topTracks(metric, w, minMs, limit),
+	topTracks: (metric: Metric, p: Period, minMs: number, limit: number) =>
+		q.topTracks(metric, p, minMs, limit),
 
-	topArtists: (metric: Metric, w: Window, minMs: number, limit: number) =>
-		q.topArtists(metric, w, minMs, limit),
+	topArtists: (metric: Metric, p: Period, minMs: number, limit: number) =>
+		q.topArtists(metric, p, minMs, limit),
 
-	hourly: (w: Window) => q.hourly(w),
-	weekly: (w: Window) => q.weekly(w),
+	hourly: (p: Period) => q.hourly(p),
+	weekly: (p: Period) => q.weekly(p),
 
 	// Library view gets the whole distinct-track list once (~20k rows) and
 	// filters/sorts in memory; the DOM is virtualized.
 	allTracks: () => q.allTracks(),
 
-	plays: (cursor: string | undefined, search: string, w: Window) =>
-		q.plays(cursor, search, w),
+	plays: (cursor: string | undefined, search: string, p: Period) =>
+		q.plays(cursor, search, p),
 
 	track: (uri: string) => q.track(uri),
 
@@ -332,15 +373,15 @@ export const api = {
 	year: (year: number) => q.year(year),
 
 	// --- Insights (§15–§25) — all accept the shared Insights period filter -
-	seasonal: (w: Window) => q.seasonal(w),
-	attention: (w: Window) => q.attention(w),
-	companions: (kind: "track" | "artist", w: Window) => q.companions(kind, w),
-	rediscoveries: (w: Window) => q.rediscoveries(w),
-	loops: (w: Window) => q.loops(w),
-	weekendSplit: (w: Window) => q.weekendSplit(w),
-	chronotype: (w: Window) => q.chronotype(w),
-	devices: (w: Window) => q.devices(w),
-	privacy: (w: Window) => q.privacy(w),
-	rangeIndex: (w: Window) => q.rangeIndex(w),
-	hiatuses: (w: Window) => q.hiatuses(w),
+	seasonal: (p: Period) => q.seasonal(p),
+	attention: (p: Period) => q.attention(p),
+	companions: (kind: "track" | "artist", p: Period) => q.companions(kind, p),
+	rediscoveries: (p: Period) => q.rediscoveries(p),
+	loops: (p: Period) => q.loops(p),
+	weekendSplit: (p: Period) => q.weekendSplit(p),
+	chronotype: (p: Period) => q.chronotype(p),
+	devices: (p: Period) => q.devices(p),
+	privacy: (p: Period) => q.privacy(p),
+	rangeIndex: (p: Period) => q.rangeIndex(p),
+	hiatuses: (p: Period) => q.hiatuses(p),
 };

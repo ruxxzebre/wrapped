@@ -192,6 +192,12 @@ export const en = {
 	"count.plays_other": "{n} plays",
 	"count.days_one": "{n} day",
 	"count.days_other": "{n} days",
+	"count.years_one": "{n} year",
+	"count.years_other": "{n} years",
+	"count.months_one": "{n} month",
+	"count.months_other": "{n} months",
+	"count.hours_one": "{n} hour",
+	"count.hours_other": "{n} hours",
 
 	// --- status / splash ---------------------------------------------------
 	"status.loading": "loading…",
@@ -373,10 +379,38 @@ export const en = {
 	"story.faded.line":
 		"You haven't touched {track} since {since}. It was your anthem in {peak}.",
 	"story.faded.foot": "{plays} plays that year · {artist}",
+	"story.crossroads.eyebrow": "Catch your breath",
+	"story.crossroads.line":
+		"That's the first half. Keep swiping, there's {more} below.",
+	"story.crossroads.more": "more of your story",
+	"story.crossroads.foot":
+		"Or step out now: open the {summary}, or dig into your {insights}.",
+	"story.crossroads.summary": "Summary",
+	"story.crossroads.insights": "Insights",
+	"story.companion.eyebrow": "Still here",
+	"story.companion.line":
+		"Through it all, {artist} stayed with you for {years} and counting.",
+	"story.companion.foot": "{plays} · in your rotation since {firstYear}",
+	"story.comeback.eyebrow": "You came back",
+	"story.comeback.line":
+		"You let {track} go quiet for {gap}, then couldn't stop again.",
+	"story.comeback.foot":
+		"Back on {date} · {plays} in the month after · {artist}",
+	"story.marathon.eyebrow": "One day you didn't stop",
+	"story.marathon.line": "On {date} you listened for {hours}.",
+	"story.marathon.foot": "{weekday} · {streams} tracks · mostly {artist}",
+	"story.devotion.eyebrow": "Never once skipped",
+	"story.devotion.line":
+		"You played {track} {times}, and let it finish every single time.",
+	"story.devotion.foot":
+		"{artist} · while you skipped {skip} of everything else",
 	"story.closing.eyebrow": "That's the story",
 	"story.closing.line":
 		"The numbers behind every beat are waiting for you in the {summary}.",
 	"story.closing.summary": "Summary",
+	"story.closing.foot":
+		"Want the patterns behind it? Your {insights} go deeper.",
+	"story.closing.insights": "Insights",
 	"story.closing.cta": "Go To Summary →",
 
 	// --- completion bands (backend codes) ----------------------------------

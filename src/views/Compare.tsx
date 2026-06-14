@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
-import type { Metric, Window } from "../api";
+import type { Metric, Period } from "../api";
 import { MetricToggle, WindowPicker } from "../controls";
 import { fmtInt } from "../format";
 import { useT } from "../i18n";
@@ -40,11 +40,11 @@ export default function Compare() {
 	const [entity, setEntity] = useState<Entity>("artists");
 	// A user-picked window overrides the default; until then each side derives
 	// its default (earliest vs latest year) from the summary during render.
-	const [aPicked, setA] = useState<Window | null>(null);
-	const [bPicked, setB] = useState<Window | null>(null);
+	const [aPicked, setA] = useState<Period | null>(null);
+	const [bPicked, setB] = useState<Period | null>(null);
 	const years = (summary?.years ?? []).map((y) => y.year).sort((x, y) => x - y);
-	const a: Window = aPicked ?? (years.length >= 2 ? yearWindow(years[0]) : {});
-	const b: Window =
+	const a: Period = aPicked ?? (years.length >= 2 ? yearWindow(years[0]) : {});
+	const b: Period =
 		bPicked ?? (years.length >= 2 ? yearWindow(years[years.length - 1]) : {});
 
 	const qA = useQuery({
@@ -152,8 +152,8 @@ function WindowGroup({
 	onChange,
 }: {
 	tag: string;
-	value: Window;
-	onChange: (w: Window) => void;
+	value: Period;
+	onChange: (p: Period) => void;
 }) {
 	return (
 		<Row gap="md" align="end" wrap>
@@ -171,7 +171,7 @@ function WindowGroup({
 	);
 }
 
-const yearWindow = (y: number): Window => ({
+const yearWindow = (y: number): Period => ({
 	from: `${y}-01-01`,
 	to: `${y}-12-31`,
 });

@@ -8,7 +8,7 @@ import {
 	redirect,
 } from "@tanstack/react-router";
 import App from "./App";
-import type { Window } from "./api";
+import type { Period } from "./api";
 import type { TKey } from "./i18n";
 import { q } from "./queries";
 import { queryClient } from "./queryClient";
@@ -78,7 +78,7 @@ async function prefetch(
 	await build(qc);
 }
 
-const yearWindow = (y: number): Window => ({
+const yearWindow = (y: number): Period => ({
 	from: `${y}-01-01`,
 	to: `${y}-12-31`,
 });

@@ -30,8 +30,118 @@ export const ro: Translation = {
 	"nav.group.explore": "Explorare",
 	"nav.group.system": "Sistem",
 	"nav.insights.overview": "Prezentare",
+	"nav.insights.taste": "Gust",
+	"nav.insights.habits": "Obiceiuri",
+	"nav.insights.events": "Evenimente",
+	"nav.insights.devices": "Dispozitive",
 	"insights.dashboardTitle": "Statistici",
 	"insights.empty": "În curând vor apărea mai multe statistici.",
+	"insights.notEnough": "Insuficiente date încă.",
+
+	// Overview headline cards
+	"insights.overview.lede":
+		"O privire mai profundă asupra ascultărilor tale — forma gustului, obiceiuri zilnice, evenimente notabile și dispozitivele din spatele tuturor. Alege un tab mai sus.",
+	"insights.overview.gini": "concentrația gustului",
+	"insights.overview.longestHiatus": "cea mai lungă pauză",
+	"insights.overview.nightShare": "redări după miezul nopții",
+
+	// --- §24 Range index ---------------------------------------------------
+	"insights.range.title": "Indice de diversitate",
+	"insights.range.lede":
+		"Cât din ascultările tale provin dintr-un număr mic de piese. 0 înseamnă perfect uniform; aproape de 1 înseamnă că câteva cântece domină.",
+	"insights.range.gini": "concentrație (Gini)",
+	"insights.range.top1": "ponderea top 1%",
+	"insights.range.byYear": "Concentrație pe ani",
+	"insights.range.giniLine": "Gini",
+	"insights.range.top1Line": "ponderea top 1%",
+
+	// --- §17 Loyal companions ---------------------------------------------
+	"insights.companions.title": "Însoțitori fideli",
+	"insights.companions.lede":
+		"Redate în fiecare an din istoricul tău — constantele care nu au plecat niciodată.",
+	"insights.companions.empty":
+		"Ai nevoie de cel puțin 3 ani de date pentru a găsi constantele tale.",
+
+	// --- §15 Seasonal ------------------------------------------------------
+	"insights.seasonal.title": "Cântecele anotimpurilor",
+	"insights.seasonal.lede":
+		"Piese ale căror redări se concentrează într-o perioadă a anului — imnurile tale de vară și cântecele doar de iarnă.",
+	"insights.seasonal.peak": "vârf",
+	"insights.seasonal.concentration": "legate de sezon",
+	"insights.seasonal.empty":
+		"Ai nevoie de cel puțin 2 ani de date pentru a identifica sezonalitatea.",
+
+	// --- §21 Chronotype ----------------------------------------------------
+	"insights.chronotype.title": "Deriva cronotipului",
+	"insights.chronotype.lede":
+		"Ora tipică de ascultare de-a lungul anilor — devii mai nocturn?",
+	"insights.chronotype.meanHour": "centru de greutate",
+	"insights.chronotype.nightShare": "înainte de ora 6",
+	"insights.chronotype.meanLine": "ora medie",
+
+	// --- §20 Weekend vs weekday -------------------------------------------
+	"insights.weekend.title": "Eul de weekend vs. cel de săptămână",
+	"insights.weekend.lede":
+		"Eul tău de săptămână diferă cu {pct} față de cel de weekend.",
+	"insights.weekend.weekday": "Zile lucrătoare",
+	"insights.weekend.weekend": "Weekend",
+
+	// --- §16 Attention span ------------------------------------------------
+	"insights.attention.title": "Durata atenției",
+	"insights.attention.lede":
+		"Mai termini cântecele? Fracțiunea medie din fiecare piesă pe care o asculți efectiv, pe an.",
+	"insights.attention.completion": "finalizare medie",
+	"insights.attention.median": "redare mediană",
+	"insights.attention.completionLine": "finalizare",
+
+	// --- §25 Hiatuses ------------------------------------------------------
+	"insights.hiatuses.title": "Pauze",
+	"insights.hiatuses.lede":
+		"Perioade în care abia ai deschis Spotify — tăcerile tale cele mai lungi. O lacună în export poate arăta identic cu o pauză reală.",
+
+	// --- §18 Rediscoveries -------------------------------------------------
+	"insights.rediscoveries.title": "Redescoperiri",
+	"insights.rediscoveries.lede":
+		"Piese care au tăcut luni de zile, apoi au revenit cu forță.",
+	"insights.rediscoveries.revival": "{n} redări în 30 de zile",
+
+	// --- §19 On repeat -----------------------------------------------------
+	"insights.loops.title": "Pe repeat",
+	"insights.loops.lede":
+		"Redări consecutive ale aceleiași piese — când ai avut-o pe repeat cu adevărat.",
+	"insights.loops.run": "{n}× la rând",
+
+	// --- §22 Device archaeology -------------------------------------------
+	"insights.devices.title": "Arheologia dispozitivelor",
+	"insights.devices.lede":
+		"Povestea hardware ascunsă în câmpul platformei — când a apărut și a dispărut fiecare familie de dispozitive. Grosier intenționat: user-agent-ul exact nu este niciodată importat.",
+	"insights.devices.share": "pondere",
+
+	// --- §23 Incognito & offline ------------------------------------------
+	"insights.privacy.title": "Incognito și offline",
+	"insights.privacy.lede":
+		"Două flag-uri pe care nimeni nu le afișează: sesiuni private care nu au ajuns niciodată în profilul tău și ce ai descărcat pentru drum.",
+	"insights.privacy.incognito": "redări incognito",
+	"insights.privacy.offline": "redări offline",
+	"insights.privacy.topOffline": "Top descărcări (offline)",
+	"insights.privacy.topIncognito": "Top piese incognito",
+	"insights.privacy.none": "Nicio redare privată sau offline înregistrată.",
+
+	// --- shared insight columns -------------------------------------------
+	"insights.col.years": "ani",
+	"insights.col.peak": "lună de vârf",
+	"insights.col.locked": "sezonier",
+	"insights.col.gap": "tăcere",
+	"insights.col.comeback": "revenire",
+	"insights.col.revival": "renaștere",
+	"insights.col.run": "buclă",
+	"insights.col.started": "început",
+	"insights.col.device": "dispozitiv",
+	"insights.col.first": "primul",
+	"insights.col.last": "ultimul",
+	"insights.col.from": "de la",
+	"insights.col.to": "până la",
+	"insights.col.days": "zile",
 
 	// --- shared controls ---------------------------------------------------
 	"controls.rankBy": "clasează după",
@@ -77,6 +187,15 @@ export const ro: Translation = {
 	"count.days_one": "{n} zi",
 	"count.days_few": "{n} zile",
 	"count.days_other": "{n} de zile",
+	"count.years_one": "{n} an",
+	"count.years_few": "{n} ani",
+	"count.years_other": "{n} de ani",
+	"count.months_one": "{n} lună",
+	"count.months_few": "{n} luni",
+	"count.months_other": "{n} de luni",
+	"count.hours_one": "{n} oră",
+	"count.hours_few": "{n} ore",
+	"count.hours_other": "{n} de ore",
 
 	// --- status / splash ---------------------------------------------------
 	"status.loading": "se încarcă…",
@@ -260,10 +379,36 @@ export const ro: Translation = {
 	"story.faded.line":
 		"Nu ai mai ascultat {track} din {since}. Era imnul tău în {peak}.",
 	"story.faded.foot": "{plays} redări în acel an · {artist}",
+	"story.crossroads.eyebrow": "Trage-ți sufletul",
+	"story.crossroads.line":
+		"Asta a fost prima jumătate. Continuă să derulezi, {more} mai jos.",
+	"story.crossroads.more": "mai mult din povestea ta",
+	"story.crossroads.foot":
+		"Sau ieși acum: deschide {summary} ori intră în {insights}.",
+	"story.crossroads.summary": "Rezumat",
+	"story.crossroads.insights": "Statistici",
+	"story.companion.eyebrow": "Încă aici",
+	"story.companion.line":
+		"Prin toate, {artist} a rămas cu tine de {years} și continuă.",
+	"story.companion.foot": "{plays} · în rotația ta din {firstYear}",
+	"story.comeback.eyebrow": "Te-ai întors",
+	"story.comeback.line":
+		"Ai lăsat {track} în tăcere {gap}, apoi nu te-ai mai putut opri.",
+	"story.comeback.foot":
+		"Revenit pe {date} · {plays} în luna de după · {artist}",
+	"story.marathon.eyebrow": "Într-o zi nu te-ai oprit",
+	"story.marathon.line": "Pe {date} ai ascultat {hours}.",
+	"story.marathon.foot": "{weekday} · {streams} piese · mai ales {artist}",
+	"story.devotion.eyebrow": "Niciodată sărită",
+	"story.devotion.line":
+		"Ai ascultat {track} {times} și de fiecare dată ai lăsat-o până la capăt.",
+	"story.devotion.foot": "{artist} · deși din rest săreai {skip}",
 	"story.closing.eyebrow": "Asta e povestea",
 	"story.closing.line":
 		"Cifrele din spatele fiecărui ritm te așteaptă în {summary}.",
 	"story.closing.summary": "Rezumat",
+	"story.closing.foot": "Vrei și tiparele? {insights} tale merg mai adânc.",
+	"story.closing.insights": "Statistici",
 	"story.closing.cta": "Mergi la Rezumat →",
 
 	// --- completion bands --------------------------------------------------

@@ -30,8 +30,118 @@ export const uk: Translation = {
 	"nav.group.explore": "Дослідження",
 	"nav.group.system": "Система",
 	"nav.insights.overview": "Огляд",
+	"nav.insights.taste": "Смак",
+	"nav.insights.habits": "Звички",
+	"nav.insights.events": "Події",
+	"nav.insights.devices": "Пристрої",
 	"insights.dashboardTitle": "Аналітика",
 	"insights.empty": "Незабаром з'являться нові інсайти.",
+	"insights.notEnough": "Поки недостатньо даних.",
+
+	// Overview headline cards
+	"insights.overview.lede":
+		"Глибший погляд на ваше прослуховування — форма смаку, щоденні звички, помітні події та пристрої, що стоять за всім цим. Оберіть вкладку вище.",
+	"insights.overview.gini": "концентрація смаку",
+	"insights.overview.longestHiatus": "найдовша пауза",
+	"insights.overview.nightShare": "прослуховування після опівночі",
+
+	// --- §24 Range index ---------------------------------------------------
+	"insights.range.title": "Індекс діапазону",
+	"insights.range.lede":
+		"Яка частка вашого прослуховування припадає на жменьку треків. 0 — цілковито рівномірно; ближче до 1 — кілька пісень домінують.",
+	"insights.range.gini": "концентрація (Gini)",
+	"insights.range.top1": "частка топ 1%",
+	"insights.range.byYear": "Концентрація по роках",
+	"insights.range.giniLine": "Gini",
+	"insights.range.top1Line": "частка топ 1%",
+
+	// --- §17 Loyal companions ---------------------------------------------
+	"insights.companions.title": "Вірні супутники",
+	"insights.companions.lede":
+		"Зіграні в кожному році вашої історії — константи, що ніколи не зникали.",
+	"insights.companions.empty":
+		"Потрібно щонайменше 3 роки даних, щоб знайти ваші константи.",
+
+	// --- §15 Seasonal ------------------------------------------------------
+	"insights.seasonal.title": "Пісні пір року",
+	"insights.seasonal.lede":
+		"Треки, прослуховування яких концентруються в одному часі року — ваші літні гімни та зимові пісні.",
+	"insights.seasonal.peak": "пік",
+	"insights.seasonal.concentration": "прив'язані до сезону",
+	"insights.seasonal.empty":
+		"Потрібно щонайменше 2 роки даних, щоб помітити сезонність.",
+
+	// --- §21 Chronotype ----------------------------------------------------
+	"insights.chronotype.title": "Зсув хронотипу",
+	"insights.chronotype.lede":
+		"Типова година прослуховування протягом років — ви стаєте більш нічним слухачем?",
+	"insights.chronotype.meanHour": "центр ваги",
+	"insights.chronotype.nightShare": "до 6 ранку",
+	"insights.chronotype.meanLine": "середня година",
+
+	// --- §20 Weekend vs weekday -------------------------------------------
+	"insights.weekend.title": "Буденне і вихідне Я",
+	"insights.weekend.lede":
+		"Ваше буденне Я відрізняється від вихідного на {pct}.",
+	"insights.weekend.weekday": "Будні",
+	"insights.weekend.weekend": "Вихідні",
+
+	// --- §16 Attention span ------------------------------------------------
+	"insights.attention.title": "Тривалість уваги",
+	"insights.attention.lede":
+		"Ви все ще дослуховуєте пісні? Середня частка кожного треку, яку ви насправді слухаєте, по роках.",
+	"insights.attention.completion": "середнє завершення",
+	"insights.attention.median": "медіанне прослуховування",
+	"insights.attention.completionLine": "завершеність",
+
+	// --- §25 Hiatuses ------------------------------------------------------
+	"insights.hiatuses.title": "Паузи",
+	"insights.hiatuses.lede":
+		"Проміжки, коли ви майже не відкривали Spotify — ваші найдовші мовчання. Прогалина в експорті може виглядати так само, як і справжня пауза.",
+
+	// --- §18 Rediscoveries -------------------------------------------------
+	"insights.rediscoveries.title": "Перевідкриття",
+	"insights.rediscoveries.lede":
+		"Треки, які замовкли на місяці, а потім повернулись із новою силою.",
+	"insights.rediscoveries.revival": "{n} прослух. за 30 днів",
+
+	// --- §19 On repeat -----------------------------------------------------
+	"insights.loops.title": "На повторі",
+	"insights.loops.lede":
+		"Послідовні прослуховування того самого треку підряд — коли ви дійсно ставили його на повтор.",
+	"insights.loops.run": "{n}× поспіль",
+
+	// --- §22 Device archaeology -------------------------------------------
+	"insights.devices.title": "Археологія пристроїв",
+	"insights.devices.lede":
+		"Апаратна історія, прихована у полі платформи — коли з'явилася і зникла кожна сімейство пристроїв. Навмисно грубо: точний user-agent ніколи не імпортується.",
+	"insights.devices.share": "частка",
+
+	// --- §23 Incognito & offline ------------------------------------------
+	"insights.privacy.title": "Інкогніто та офлайн",
+	"insights.privacy.lede":
+		"Два прапори, які ніхто не показує: приватні сесії, що ніколи не потрапляли у ваш профіль, і те, що ви завантажили для дороги.",
+	"insights.privacy.incognito": "прослух. в інкогніто",
+	"insights.privacy.offline": "офлайн прослух.",
+	"insights.privacy.topOffline": "Топ завантажень (офлайн)",
+	"insights.privacy.topIncognito": "Топ треків в інкогніто",
+	"insights.privacy.none": "Приватних або офлайн прослуховувань не записано.",
+
+	// --- shared insight columns -------------------------------------------
+	"insights.col.years": "роки",
+	"insights.col.peak": "піковий місяць",
+	"insights.col.locked": "прив'язано",
+	"insights.col.gap": "мовчання",
+	"insights.col.comeback": "повернення",
+	"insights.col.revival": "відродження",
+	"insights.col.run": "повтор",
+	"insights.col.started": "початок",
+	"insights.col.device": "пристрій",
+	"insights.col.first": "перший",
+	"insights.col.last": "останній",
+	"insights.col.from": "з",
+	"insights.col.to": "до",
+	"insights.col.days": "дні",
 
 	// --- shared controls ---------------------------------------------------
 	"controls.rankBy": "сортувати за",
@@ -77,6 +187,15 @@ export const uk: Translation = {
 	"count.days_one": "{n} день",
 	"count.days_few": "{n} дні",
 	"count.days_many": "{n} днів",
+	"count.years_one": "{n} рік",
+	"count.years_few": "{n} роки",
+	"count.years_many": "{n} років",
+	"count.months_one": "{n} місяць",
+	"count.months_few": "{n} місяці",
+	"count.months_many": "{n} місяців",
+	"count.hours_one": "{n} година",
+	"count.hours_few": "{n} години",
+	"count.hours_many": "{n} годин",
 
 	// --- status / splash ---------------------------------------------------
 	"status.loading": "завантаження…",
@@ -259,10 +378,37 @@ export const uk: Translation = {
 	"story.faded.line":
 		"Ви не вмикали {track} з {since}. Це був ваш гімн у {peak}.",
 	"story.faded.foot": "{plays} прослуховувань того року · {artist}",
+	"story.crossroads.eyebrow": "Переведіть подих",
+	"story.crossroads.line":
+		"Це лише перша половина. Гортайте далі, {more} попереду.",
+	"story.crossroads.more": "більше вашої історії",
+	"story.crossroads.foot":
+		"Або вийдіть зараз: відкрийте {summary} чи зануртеся в {insights}.",
+	"story.crossroads.summary": "Огляд",
+	"story.crossroads.insights": "Аналітика",
+	"story.companion.eyebrow": "Досі поруч",
+	"story.companion.line":
+		"Крізь усе це {artist} залишався з вами вже {years} і далі.",
+	"story.companion.foot": "{plays} · у вашій ротації з {firstYear}",
+	"story.comeback.eyebrow": "Ви повернулися",
+	"story.comeback.line":
+		"Ви відпустили {track} на {gap}, а потім знову не могли спинитися.",
+	"story.comeback.foot":
+		"Повернення {date} · {plays} за місяць після · {artist}",
+	"story.marathon.eyebrow": "Одного дня ви не спинялися",
+	"story.marathon.line": "{date} ви слухали {hours}.",
+	"story.marathon.foot": "{weekday} · {streams} треків · здебільшого {artist}",
+	"story.devotion.eyebrow": "Жодного разу не пропустили",
+	"story.devotion.line":
+		"Ви слухали {track} {times} і щоразу давали дослухати до кінця.",
+	"story.devotion.foot": "{artist} · хоча решту пропускали на {skip}",
 	"story.closing.eyebrow": "Ось і вся історія",
 	"story.closing.line":
 		"Цифри за кожним бітом чекають на вас у розділі {summary}.",
 	"story.closing.summary": "Огляд",
+	"story.closing.foot":
+		"Хочете побачити закономірності? Ваша {insights} копне глибше.",
+	"story.closing.insights": "Аналітика",
 	"story.closing.cta": "Перейти до огляду →",
 
 	// --- completion bands --------------------------------------------------
