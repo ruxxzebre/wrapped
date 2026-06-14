@@ -188,9 +188,9 @@ const insightsTasteRoute = createRoute({
 	loader: ({ context: { queryClient } }) =>
 		prefetch(queryClient, (qc) =>
 			Promise.all([
-				qc.ensureQueryData(q.rangeIndex()),
-				qc.ensureQueryData(q.companions("track")),
-				qc.ensureQueryData(q.seasonal()),
+				qc.ensureQueryData(q.rangeIndex({})),
+				qc.ensureQueryData(q.companions("track", {})),
+				qc.ensureQueryData(q.seasonal({})),
 			]),
 		),
 });
@@ -201,9 +201,9 @@ const insightsHabitsRoute = createRoute({
 	loader: ({ context: { queryClient } }) =>
 		prefetch(queryClient, (qc) =>
 			Promise.all([
-				qc.ensureQueryData(q.chronotype()),
-				qc.ensureQueryData(q.weekendSplit()),
-				qc.ensureQueryData(q.attention()),
+				qc.ensureQueryData(q.chronotype({})),
+				qc.ensureQueryData(q.weekendSplit({})),
+				qc.ensureQueryData(q.attention({})),
 			]),
 		),
 });
@@ -214,9 +214,9 @@ const insightsEventsRoute = createRoute({
 	loader: ({ context: { queryClient } }) =>
 		prefetch(queryClient, (qc) =>
 			Promise.all([
-				qc.ensureQueryData(q.hiatuses()),
-				qc.ensureQueryData(q.rediscoveries()),
-				qc.ensureQueryData(q.loops()),
+				qc.ensureQueryData(q.hiatuses({})),
+				qc.ensureQueryData(q.rediscoveries({})),
+				qc.ensureQueryData(q.loops({})),
 			]),
 		),
 });
@@ -227,8 +227,8 @@ const insightsDevicesRoute = createRoute({
 	loader: ({ context: { queryClient } }) =>
 		prefetch(queryClient, (qc) =>
 			Promise.all([
-				qc.ensureQueryData(q.devices()),
-				qc.ensureQueryData(q.privacy()),
+				qc.ensureQueryData(q.devices({})),
+				qc.ensureQueryData(q.privacy({})),
 			]),
 		),
 });

@@ -6,6 +6,7 @@ import { ArtistLink, TrackLink } from "../links";
 import { q } from "../queries";
 import { type Column, DataTable, Muted, Status } from "../ui";
 import { Cards } from "../widgets";
+import { useInsightsPeriod } from "./insightsPeriod";
 import { Section } from "./insightsShared";
 import * as css from "./insightsShared.css";
 
@@ -22,7 +23,8 @@ export default function InsightsDevices() {
 
 function DevicesPanel() {
 	const t = useT();
-	const { data, error } = useQuery(q.devices());
+	const { period } = useInsightsPeriod();
+	const { data, error } = useQuery(q.devices(period));
 	const total = data?.reduce((s, d) => s + d.hours, 0) || 1;
 
 	const columns: Column<Device>[] = [
@@ -98,7 +100,8 @@ function TrackTop({ title, rows }: { title: string; rows: TopTrack[] }) {
 
 function PrivacyPanel() {
 	const t = useT();
-	const { data, error } = useQuery(q.privacy());
+	const { period } = useInsightsPeriod();
+	const { data, error } = useQuery(q.privacy(period));
 
 	if (!data) {
 		return (

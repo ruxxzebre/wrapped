@@ -331,16 +331,16 @@ export const api = {
 	onThisDay: () => q.onThisDay(),
 	year: (year: number) => q.year(year),
 
-	// --- Insights (§15–§25) ------------------------------------------------
-	seasonal: () => q.seasonal(),
-	attention: () => q.attention(),
-	companions: (kind: "track" | "artist") => q.companions(kind),
-	rediscoveries: () => q.rediscoveries(),
-	loops: () => q.loops(),
-	weekendSplit: () => q.weekendSplit(),
-	chronotype: () => q.chronotype(),
-	devices: () => q.devices(),
-	privacy: () => q.privacy(),
-	rangeIndex: () => q.rangeIndex(),
-	hiatuses: () => q.hiatuses(),
+	// --- Insights (§15–§25) — all accept the shared Insights period filter -
+	seasonal: (w: Window) => q.seasonal(w),
+	attention: (w: Window) => q.attention(w),
+	companions: (kind: "track" | "artist", w: Window) => q.companions(kind, w),
+	rediscoveries: (w: Window) => q.rediscoveries(w),
+	loops: (w: Window) => q.loops(w),
+	weekendSplit: (w: Window) => q.weekendSplit(w),
+	chronotype: (w: Window) => q.chronotype(w),
+	devices: (w: Window) => q.devices(w),
+	privacy: (w: Window) => q.privacy(w),
+	rangeIndex: (w: Window) => q.rangeIndex(w),
+	hiatuses: (w: Window) => q.hiatuses(w),
 };

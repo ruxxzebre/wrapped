@@ -1,5 +1,4 @@
 import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
 import {
 	Bar,
 	BarChart,
@@ -9,32 +8,28 @@ import {
 	XAxis,
 	YAxis,
 } from "recharts";
-import type { Bucket, Window } from "../api";
-import { WindowPicker } from "../controls";
+import type { Bucket } from "../api";
 import { weekdayShort } from "../format";
 import { useT } from "../i18n";
 import { q } from "../queries";
-import { ControlsBar, chartColors, Panel, Status } from "../ui";
+import { chartColors, Panel, Status } from "../ui";
+import { useInsightsPeriod } from "./insightsPeriod";
 
 export default function Patterns() {
 	const t = useT();
-	const [window, setWindow] = useState<Window>({});
+	const { period } = useInsightsPeriod();
 
 	const hourly = useQuery({
-		...q.hourly(window),
+		...q.hourly(period),
 		placeholderData: (prev) => prev,
 	});
 	const weekly = useQuery({
-		...q.weekly(window),
+		...q.weekly(period),
 		placeholderData: (prev) => prev,
 	});
 
 	return (
 		<>
-			<ControlsBar>
-				<WindowPicker value={window} onChange={setWindow} />
-			</ControlsBar>
-
 			<PatternChart
 				title={t("patterns.byHour")}
 				data={hourly.data}

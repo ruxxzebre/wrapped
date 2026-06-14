@@ -1,11 +1,14 @@
 import { Link, Outlet } from "@tanstack/react-router";
+import { WindowPicker } from "../controls";
 import { useT } from "../i18n";
+import { ControlsBar } from "../ui";
 import * as buttonCss from "../ui/Button.css";
 import * as css from "./InsightsLayout.css";
+import { InsightsPeriodProvider, useInsightsPeriod } from "./insightsPeriod";
 
 // Sub-tabs for the Insights group. "Overview" is the card dashboard (index
-// route); "Patterns" is the relocated time-of-day view. Future analytics add
-// entries here.
+// route); the rest are the deeper analytics. The period/from/to filter below the
+// tabs is shared by every sub-view (see insightsWindow).
 const SUBTABS = [
 	{ titleKey: "nav.insights.overview", slug: "/insights" },
 	{ titleKey: "nav./patterns", slug: "/insights/patterns" },
@@ -15,8 +18,9 @@ const SUBTABS = [
 	{ titleKey: "nav.insights.devices", slug: "/insights/devices" },
 ] as const;
 
-export default function InsightsLayout() {
+function Shell() {
 	const t = useT();
+	const { period, setPeriod } = useInsightsPeriod();
 	return (
 		<>
 			<div className={css.subnav}>
@@ -33,7 +37,18 @@ export default function InsightsLayout() {
 					</Link>
 				))}
 			</div>
+			<ControlsBar>
+				<WindowPicker value={period} onChange={setPeriod} />
+			</ControlsBar>
 			<Outlet />
 		</>
+	);
+}
+
+export default function InsightsLayout() {
+	return (
+		<InsightsPeriodProvider>
+			<Shell />
+		</InsightsPeriodProvider>
 	);
 }

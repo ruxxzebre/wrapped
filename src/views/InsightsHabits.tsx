@@ -15,6 +15,7 @@ import { ArtistLink } from "../links";
 import { q } from "../queries";
 import { type Column, chartColors, DataTable, Status } from "../ui";
 import { Cards } from "../widgets";
+import { useInsightsPeriod } from "./insightsPeriod";
 import { Section } from "./insightsShared";
 import * as css from "./insightsShared.css";
 
@@ -39,7 +40,8 @@ export default function InsightsHabits() {
 
 function ChronotypePanel() {
 	const t = useT();
-	const { data, error } = useQuery(q.chronotype());
+	const { period } = useInsightsPeriod();
+	const { data, error } = useQuery(q.chronotype(period));
 	const latest = data?.at(-1);
 
 	const columns: Column<ChronotypeYear>[] = [
@@ -159,7 +161,8 @@ function SplitList({ title, rows }: { title: string; rows: SplitArtist[] }) {
 
 function WeekendPanel() {
 	const t = useT();
-	const { data, error } = useQuery(q.weekendSplit());
+	const { period } = useInsightsPeriod();
+	const { data, error } = useQuery(q.weekendSplit(period));
 
 	return (
 		<Section
@@ -190,7 +193,8 @@ function WeekendPanel() {
 
 function AttentionPanel() {
 	const t = useT();
-	const { data, error } = useQuery(q.attention());
+	const { period } = useInsightsPeriod();
+	const { data, error } = useQuery(q.attention(period));
 
 	const columns: Column<AttentionYear>[] = [
 		{ key: "year", header: t("controls.year"), cell: (r) => r.year },

@@ -25,6 +25,7 @@ import {
 	ToggleGroup,
 } from "../ui";
 import { Cards } from "../widgets";
+import { useInsightsPeriod } from "./insightsPeriod";
 import { Section } from "./insightsShared";
 
 // Insights › Taste — the shape of what you listen to: how concentrated it is
@@ -42,7 +43,8 @@ export default function InsightsTaste() {
 
 function RangePanel() {
 	const t = useT();
-	const { data, error } = useQuery(q.rangeIndex());
+	const { period } = useInsightsPeriod();
+	const { data, error } = useQuery(q.rangeIndex(period));
 
 	return (
 		<Section title={t("insights.range.title")} lede={t("insights.range.lede")}>
@@ -115,7 +117,8 @@ function RangePanel() {
 function CompanionsPanel() {
 	const t = useT();
 	const [kind, setKind] = useState<"track" | "artist">("track");
-	const { data, error } = useQuery(q.companions(kind));
+	const { period } = useInsightsPeriod();
+	const { data, error } = useQuery(q.companions(kind, period));
 
 	const columns: Column<Companion>[] = [
 		{
@@ -186,7 +189,8 @@ function CompanionsPanel() {
 
 function SeasonalPanel() {
 	const t = useT();
-	const { data, error } = useQuery(q.seasonal());
+	const { period } = useInsightsPeriod();
+	const { data, error } = useQuery(q.seasonal(period));
 
 	const columns: Column<SeasonalTrack>[] = [
 		{

@@ -4,6 +4,7 @@ import { useT } from "../i18n";
 import { q } from "../queries";
 import { Muted } from "../ui";
 import { Cards } from "../widgets";
+import { useInsightsPeriod } from "./insightsPeriod";
 import { Section } from "./insightsShared";
 import * as css from "./insightsShared.css";
 
@@ -11,9 +12,10 @@ import * as css from "./insightsShared.css";
 // pulled from the deeper sub-tabs (Taste / Habits / Events / Devices).
 export default function InsightsDashboard() {
 	const t = useT();
-	const range = useQuery(q.rangeIndex());
-	const hiatuses = useQuery(q.hiatuses());
-	const chronotype = useQuery(q.chronotype());
+	const { period } = useInsightsPeriod();
+	const range = useQuery(q.rangeIndex(period));
+	const hiatuses = useQuery(q.hiatuses(period));
+	const chronotype = useQuery(q.chronotype(period));
 
 	const gini = range.data?.all?.gini;
 	const longestHiatus = hiatuses.data?.[0]?.days;

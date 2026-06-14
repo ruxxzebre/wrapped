@@ -5,6 +5,7 @@ import { useT } from "../i18n";
 import { ArtistLink, TrackLink } from "../links";
 import { q } from "../queries";
 import { type Column, DataTable, Muted, Status } from "../ui";
+import { useInsightsPeriod } from "./insightsPeriod";
 import { Section } from "./insightsShared";
 
 // Insights › Events — datable moments in the history: the silences (§25), tracks
@@ -21,7 +22,8 @@ export default function InsightsEvents() {
 
 function HiatusesPanel() {
 	const t = useT();
-	const { data, error } = useQuery(q.hiatuses());
+	const { period } = useInsightsPeriod();
+	const { data, error } = useQuery(q.hiatuses(period));
 
 	const columns: Column<Hiatus>[] = [
 		{
@@ -57,7 +59,8 @@ function HiatusesPanel() {
 
 function RediscoveriesPanel() {
 	const t = useT();
-	const { data, error } = useQuery(q.rediscoveries());
+	const { period } = useInsightsPeriod();
+	const { data, error } = useQuery(q.rediscoveries(period));
 
 	const columns: Column<Rediscovery>[] = [
 		{
@@ -113,7 +116,8 @@ function RediscoveriesPanel() {
 
 function LoopsPanel() {
 	const t = useT();
-	const { data, error } = useQuery(q.loops());
+	const { period } = useInsightsPeriod();
+	const { data, error } = useQuery(q.loops(period));
 
 	const columns: Column<Loop>[] = [
 		{

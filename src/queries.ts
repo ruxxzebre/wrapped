@@ -85,44 +85,62 @@ export const q = {
 			queryFn: () => fetchTop(entity, metric, window),
 		}),
 
-	// --- Insights (ideas.md §15–§25) ---------------------------------------
-	seasonal: () =>
-		queryOptions({ queryKey: ["seasonal"] as const, queryFn: api.seasonal }),
-	attention: () =>
-		queryOptions({ queryKey: ["attention"] as const, queryFn: api.attention }),
-	companions: (kind: "track" | "artist") =>
+	// --- Insights (ideas.md §15–§25) — keyed by the shared period filter ----
+	seasonal: (period: Window) =>
 		queryOptions({
-			queryKey: ["companions", kind] as const,
-			queryFn: () => api.companions(kind),
+			queryKey: ["seasonal", period] as const,
+			queryFn: () => api.seasonal(period),
 		}),
-	rediscoveries: () =>
+	attention: (period: Window) =>
 		queryOptions({
-			queryKey: ["rediscoveries"] as const,
-			queryFn: api.rediscoveries,
+			queryKey: ["attention", period] as const,
+			queryFn: () => api.attention(period),
 		}),
-	loops: () =>
-		queryOptions({ queryKey: ["loops"] as const, queryFn: api.loops }),
-	weekendSplit: () =>
+	companions: (kind: "track" | "artist", period: Window) =>
 		queryOptions({
-			queryKey: ["weekendSplit"] as const,
-			queryFn: api.weekendSplit,
+			queryKey: ["companions", kind, period] as const,
+			queryFn: () => api.companions(kind, period),
 		}),
-	chronotype: () =>
+	rediscoveries: (period: Window) =>
 		queryOptions({
-			queryKey: ["chronotype"] as const,
-			queryFn: api.chronotype,
+			queryKey: ["rediscoveries", period] as const,
+			queryFn: () => api.rediscoveries(period),
 		}),
-	devices: () =>
-		queryOptions({ queryKey: ["devices"] as const, queryFn: api.devices }),
-	privacy: () =>
-		queryOptions({ queryKey: ["privacy"] as const, queryFn: api.privacy }),
-	rangeIndex: () =>
+	loops: (period: Window) =>
 		queryOptions({
-			queryKey: ["rangeIndex"] as const,
-			queryFn: api.rangeIndex,
+			queryKey: ["loops", period] as const,
+			queryFn: () => api.loops(period),
 		}),
-	hiatuses: () =>
-		queryOptions({ queryKey: ["hiatuses"] as const, queryFn: api.hiatuses }),
+	weekendSplit: (period: Window) =>
+		queryOptions({
+			queryKey: ["weekendSplit", period] as const,
+			queryFn: () => api.weekendSplit(period),
+		}),
+	chronotype: (period: Window) =>
+		queryOptions({
+			queryKey: ["chronotype", period] as const,
+			queryFn: () => api.chronotype(period),
+		}),
+	devices: (period: Window) =>
+		queryOptions({
+			queryKey: ["devices", period] as const,
+			queryFn: () => api.devices(period),
+		}),
+	privacy: (period: Window) =>
+		queryOptions({
+			queryKey: ["privacy", period] as const,
+			queryFn: () => api.privacy(period),
+		}),
+	rangeIndex: (period: Window) =>
+		queryOptions({
+			queryKey: ["rangeIndex", period] as const,
+			queryFn: () => api.rangeIndex(period),
+		}),
+	hiatuses: (period: Window) =>
+		queryOptions({
+			queryKey: ["hiatuses", period] as const,
+			queryFn: () => api.hiatuses(period),
+		}),
 };
 
 // --- Compare helpers (shared by the loader and the view) -------------------
