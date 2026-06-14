@@ -114,13 +114,13 @@ export const ro: Translation = {
 	// --- §22 Device archaeology -------------------------------------------
 	"insights.devices.title": "Arheologia dispozitivelor",
 	"insights.devices.lede":
-		"Povestea hardware ascunsă în câmpul platformei — când a apărut și a dispărut fiecare familie de dispozitive. Grosier intenționat: user-agent-ul exact nu este niciodată importat.",
+		"Povestea hardware ascunsă în câmpul platformei — când a apărut și a dispărut fiecare familie de dispozitive. Deliberat aproximativ: user-agent-ul exact nu este niciodată importat.",
 	"insights.devices.share": "pondere",
 
 	// --- §23 Incognito & offline ------------------------------------------
 	"insights.privacy.title": "Incognito și offline",
 	"insights.privacy.lede":
-		"Două flag-uri pe care nimeni nu le afișează: sesiuni private care nu au ajuns niciodată în profilul tău și ce ai descărcat pentru drum.",
+		"Două lucruri pe care de obicei nimeni nu le arată: sesiuni private care nu au ajuns niciodată în profilul tău și ce ai descărcat pentru drum.",
 	"insights.privacy.incognito": "redări incognito",
 	"insights.privacy.offline": "redări offline",
 	"insights.privacy.topOffline": "Top descărcări (offline)",
@@ -288,7 +288,7 @@ export const ro: Translation = {
 	"import.reimportLede":
 		"Importă un export Spotify pentru a înlocui tot ce este încărcat acum. Aceasta suprascrie datele existente.",
 	"import.reading": "Se citește exportul… {pct}%",
-	"import.importing": "Se importă istoricul… poate dura un moment.",
+	"import.importing": "Se importă istoricul… poate dura puțin.",
 	"import.complete": "Import finalizat — datele tale au fost înlocuite.",
 	"import.dropAnother": "Trage altă arhivă pentru a importa din nou.",
 	"import.dropHere":
