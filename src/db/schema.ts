@@ -99,12 +99,20 @@ export async function createListensView(tz: string): Promise<void> {
 			(ts - to_milliseconds(ms_played))
 				AT TIME ZONE 'UTC' AT TIME ZONE ${sqlString(tz)}  AS started_local
 		FROM plays`);
-	// Point-lookup index for the per-track `WHERE track_uri = ?` filters the
-	// track-detail prefilter and its helpers lean on.
+	await finalizeListens();
+}
+
+/**
+ * Post-build steps shared by a fresh `listens` materialization and a snapshot
+ * restore: the point-lookup index for the per-track `WHERE track_uri = ?`
+ * filters (the track-detail prefilter and its helpers lean on it), and a reset
+ * of the cached library-wide constants (skip-rate baseline, lifetime rank map)
+ * that were derived from the table that just got rebuilt. Parquet carries no
+ * index, so a restored `listens` needs this too.
+ */
+export async function finalizeListens(): Promise<void> {
 	await query(
 		"CREATE INDEX IF NOT EXISTS idx_listens_track ON listens (track_uri)",
 	);
-	// The cached library-wide constants (skip-rate baseline, lifetime rank map)
-	// were derived from the table that just got rebuilt — drop them.
 	resetTrackCaches();
 }

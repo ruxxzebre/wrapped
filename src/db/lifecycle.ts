@@ -3,7 +3,7 @@ import { getSetting } from "../settings";
 import { setBootStatus } from "./boot";
 import { getDB, query } from "./duckdb";
 import { deleteSnapshot, loadSnapshot, saveSnapshot } from "./opfs";
-import { createListensView, rebuildPlays } from "./schema";
+import { createListensView, finalizeListens, rebuildPlays } from "./schema";
 
 // Orchestration: zip import, OPFS snapshot restore, and the ready check that
 // gates the whole app (mirrors backend/internal/store/import.go + EnsureReady).
@@ -54,21 +54,36 @@ export async function ensureReady(): Promise<{ ready: boolean }> {
 
 	setBootStatus("Restoring your library…");
 	const db = await getDB();
-	await db.registerFileBuffer(VFS_SNAPSHOT, snap);
+	await db.registerFileBuffer(VFS_SNAPSHOT, snap.buf);
 	try {
+		// The snapshot is the materialized listens table (started_local already
+		// baked), so this is a plain columnar read — no per-row ICU AT TIME ZONE
+		// pass, the slow part of a rebuild on mobile.
 		await query(
-			`CREATE TABLE plays AS SELECT * FROM read_parquet('${VFS_SNAPSHOT}')`,
-		);
-		// Snapshots taken before incognito_mode was ingested lack the column;
-		// add it (NULL-filled) so the listens view's SELECT * stays valid. New
-		// data lands on re-import.
-		await query(
-			"ALTER TABLE plays ADD COLUMN IF NOT EXISTS incognito_mode BOOLEAN",
+			`CREATE TABLE listens AS SELECT * FROM read_parquet('${VFS_SNAPSHOT}')`,
 		);
 	} finally {
 		await db.dropFile(VFS_SNAPSHOT).catch(() => {});
 	}
-	await createListensView(currentTz());
+	// Reconstruct the timezone-independent plays source (drop the derived
+	// columns) so the timezone-change rebuild and the post-import re-assert have
+	// something to read. Cheap in-memory copy; no ICU.
+	await query(
+		"CREATE TABLE plays AS SELECT * EXCLUDE (counts_as_stream, was_skipped, started_local) FROM listens",
+	);
+	const tz = currentTz();
+	if (snap.tz === tz) {
+		// Fast path: the snapshot was baked with the active timezone, so the
+		// restored table is already correct — just rebuild the (non-persisted)
+		// index and reset derived caches.
+		await finalizeListens();
+	} else {
+		// Timezone changed since the snapshot was written: recompute started_local
+		// from plays. Rare, so paying for ICU here is fine. Re-snapshot so the
+		// next restore hits the fast path again.
+		await createListensView(tz);
+		await snapshotToOPFS();
+	}
 	playsLoaded = true;
 	return { ready: true };
 }
@@ -131,15 +146,19 @@ export async function ingestZip(
 	await snapshotToOPFS();
 }
 
-/** COPY the plays table to parquet and persist the buffer in OPFS. */
+/**
+ * COPY the (timezone-baked) listens table to parquet and persist the buffer in
+ * OPFS, tagged with the timezone it was built for so restore can tell whether
+ * it can skip the ICU rebuild.
+ */
 async function snapshotToOPFS(): Promise<void> {
 	const db = await getDB();
 	await query(
-		`COPY (SELECT * FROM plays) TO '${VFS_SNAPSHOT}' (FORMAT PARQUET)`,
+		`COPY (SELECT * FROM listens) TO '${VFS_SNAPSHOT}' (FORMAT PARQUET)`,
 	);
 	try {
 		const buf = await db.copyFileToBuffer(VFS_SNAPSHOT);
-		await saveSnapshot(buf);
+		await saveSnapshot(buf, currentTz());
 	} finally {
 		await db.dropFile(VFS_SNAPSHOT).catch(() => {});
 	}
@@ -152,6 +171,9 @@ async function snapshotToOPFS(): Promise<void> {
  */
 export async function recreateListensView(tz: string): Promise<void> {
 	await createListensView(tz);
+	// Persist the rebuilt table so the next restore reads it back directly
+	// instead of recomputing started_local against the changed timezone.
+	await snapshotToOPFS();
 }
 
 /**
