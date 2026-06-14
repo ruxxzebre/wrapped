@@ -76,6 +76,41 @@ export type Period = { from?: string; to?: string };
 export type LabelCount = { label: string; plays: number };
 export type MonthCount = { month: string; plays: number; hours: number };
 
+// A neighbour in the segue map: a track frequently played right before/after
+// this one (see track_view_ideas.md §A).
+export type Neighbor = {
+	track_uri: string;
+	name: string;
+	artist: string;
+	plays: number; // number of times the transition occurred
+};
+
+// The first time this track was heard, fleshed out into a moment (§B).
+export type TrackOrigin = {
+	date: string; // YYYY-MM-DD, local
+	weekday: string; // English weekday name (from dayname())
+	platform: string;
+	reason_start: string; // raw code, resolved with tEnum on the frontend
+	prev_uri: string | null; // the gateway track played right before — may be null
+	prev_name: string;
+	prev_artist: string;
+};
+
+export type CompletionYear = { year: number; avg_completion: number }; // §D
+export type RankYear = { year: number; rank: number }; // §I
+export type TrackLoop = { longest_run: number; date: string }; // §F
+export type TrackSeason = {
+	peak_month: number; // 0-based
+	concentration: number; // circular resultant length, 0..1
+	years: number;
+};
+export type TrackMilestone = { n: number; date: string }; // §J: Nth-play date
+export type TrackComeback = {
+	date: string;
+	gap_days: number;
+	plays_30d: number;
+}; // §K
+
 export type TrackDetail = {
 	track_uri: string;
 	name: string;
@@ -84,15 +119,32 @@ export type TrackDetail = {
 	plays: number;
 	hours: number;
 	skip_ratio: number;
+	skip_ratio_all: number; // library-wide baseline, for contrast (§D)
 	first_play: string;
 	last_play: string;
 	rank_plays: number;
 	max_ms: number;
 	monthly: MonthCount[];
 	hourly: Bucket[];
+	weekly: Bucket[]; // isodow buckets 1..7 (§G)
 	platforms: LabelCount[];
 	reason_start: LabelCount[];
+	reason_end: LabelCount[]; // §C
 	completion: LabelCount[];
+	completion_yearly: CompletionYear[]; // §D
+	countries: LabelCount[]; // §H
+	rank_yearly: RankYear[]; // §I
+	shuffle_ratio: number; // §E
+	skip_shuffle: number | null; // §E
+	skip_intentional: number | null; // §E
+	neighbors_before: Neighbor[]; // §A
+	neighbors_after: Neighbor[]; // §A
+	origin: TrackOrigin | null; // §B
+	loop: TrackLoop | null; // §F
+	binge_days: number; // §F
+	season: TrackSeason | null; // §G
+	milestone: TrackMilestone | null; // §J
+	comeback: TrackComeback | null; // §K
 };
 
 export type AlbumRow = { album: string; plays: number; hours: number };

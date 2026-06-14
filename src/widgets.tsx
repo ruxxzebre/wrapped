@@ -4,13 +4,15 @@ import {
 	Bar,
 	BarChart,
 	CartesianGrid,
+	Line,
+	LineChart,
 	ResponsiveContainer,
 	Tooltip,
 	XAxis,
 	YAxis,
 } from "recharts";
 import type { Bucket, LabelCount, MonthCount } from "./api";
-import { fmtInt, fmtMonth } from "./format";
+import { fmtInt, fmtMonth, weekdayShort } from "./format";
 import { Card, CardGrid, chartColors, Panel, Skeleton } from "./ui";
 import * as css from "./widgets.css";
 
@@ -159,6 +161,79 @@ export function HourBars({ data }: { data: Bucket[] }) {
 					isAnimationActive={false}
 				/>
 			</BarChart>
+		</ResponsiveContainer>
+	);
+}
+
+// WeekBars mirrors HourBars for day-of-week: isodow buckets 1..7 (Mon..Sun),
+// every weekday filled so empty days read as gaps.
+export function WeekBars({ data }: { data: Bucket[] }) {
+	const byDow = new Map(data.map((b) => [b.bucket, b.plays]));
+	const rows = Array.from({ length: 7 }, (_, i) => ({
+		label: weekdayShort(i + 1),
+		plays: byDow.get(i + 1) ?? 0,
+	}));
+	return (
+		<ResponsiveContainer width="100%" height={200}>
+			<BarChart data={rows}>
+				<CartesianGrid strokeDasharray="3 3" stroke={chartColors.grid} />
+				<XAxis dataKey="label" stroke={chartColors.axis} fontSize={11} />
+				<YAxis stroke={chartColors.axis} />
+				<Tooltip {...chartColors.tooltip} />
+				<Bar
+					dataKey="plays"
+					fill={chartColors.accent}
+					radius={[3, 3, 0, 0]}
+					isAnimationActive={false}
+				/>
+			</BarChart>
+		</ResponsiveContainer>
+	);
+}
+
+// YearLineChart plots one value per year — used for the completion trend (a
+// 0..1 fraction, percent=true) and the per-year chart position (rank, where
+// reversed=true puts #1 at the top). Sparse years are simply absent.
+export function YearLineChart({
+	data,
+	percent = false,
+	reversed = false,
+}: {
+	data: { year: number; value: number }[];
+	percent?: boolean;
+	reversed?: boolean;
+}) {
+	const rows = data.map((d) => ({
+		label: String(d.year),
+		value: percent ? Math.round(d.value * 1000) / 10 : d.value,
+	}));
+	return (
+		<ResponsiveContainer width="100%" height={200}>
+			<LineChart data={rows}>
+				<CartesianGrid strokeDasharray="3 3" stroke={chartColors.grid} />
+				<XAxis dataKey="label" stroke={chartColors.axis} fontSize={11} />
+				<YAxis
+					stroke={chartColors.axis}
+					reversed={reversed}
+					domain={reversed ? [1, "dataMax"] : undefined}
+					allowDecimals={!reversed}
+					tickFormatter={percent ? (v) => `${v}%` : undefined}
+				/>
+				<Tooltip
+					{...chartColors.tooltip}
+					formatter={(value) => {
+						const v = Number(value);
+						return percent ? `${v}%` : reversed ? `#${v}` : `${v}`;
+					}}
+				/>
+				<Line
+					dataKey="value"
+					stroke={chartColors.info}
+					strokeWidth={2}
+					dot={{ r: 3 }}
+					isAnimationActive={false}
+				/>
+			</LineChart>
 		</ResponsiveContainer>
 	);
 }
