@@ -12,7 +12,7 @@ export type NavGroup =
 	| { kind: "expand"; headerKey: TKey; leaves: NavLeaf[] }
 	| { kind: "link"; headerKey: TKey; slug: string; tint?: Tint };
 
-export const NAV: NavGroup[] = [
+export const NAV = [
 	{
 		kind: "expand",
 		headerKey: "nav.group.home",
@@ -52,7 +52,7 @@ export const NAV: NavGroup[] = [
 			{ titleKey: "nav./settings", slug: "/settings" },
 		],
 	},
-];
+] as const satisfies readonly NavGroup[];
 
 // A sidebar leaf is highlighted only on an exact path match. "/" must match
 // exactly so it isn't lit up on every nested route.

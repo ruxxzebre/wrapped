@@ -1,10 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
-import { api, type Metric, type Window } from "../api";
+import type { Metric, Window } from "../api";
 import { MetricToggle, WindowPicker } from "../controls";
 import { fmtInt } from "../format";
 import { useT } from "../i18n";
 import { ArtistLink, TrackLink } from "../links";
+import { type CompareTop, q } from "../queries";
 import {
 	type Column,
 	ControlsBar,
@@ -20,7 +21,6 @@ import {
 } from "../ui";
 
 type Entity = "artists" | "tracks";
-const LIMIT = 250; // top-N of each window; entries outside it read as absent
 
 type Joined = {
 	key: string;
@@ -35,10 +35,7 @@ type Joined = {
 
 export default function Compare() {
 	const t = useT();
-	const { data: summary } = useQuery({
-		queryKey: ["summary"],
-		queryFn: api.summary,
-	});
+	const { data: summary } = useQuery(q.summary());
 	const [metric, setMetric] = useState<Metric>("plays");
 	const [entity, setEntity] = useState<Entity>("artists");
 	// A user-picked window overrides the default; until then each side derives
@@ -51,13 +48,11 @@ export default function Compare() {
 		bPicked ?? (years.length >= 2 ? yearWindow(years[years.length - 1]) : {});
 
 	const qA = useQuery({
-		queryKey: [entity, "cmp", metric, a],
-		queryFn: () => fetchTop(entity, metric, a),
+		...q.compareTop(entity, metric, a),
 		placeholderData: (p) => p,
 	});
 	const qB = useQuery({
-		queryKey: [entity, "cmp", metric, b],
-		queryFn: () => fetchTop(entity, metric, b),
+		...q.compareTop(entity, metric, b),
 		placeholderData: (p) => p,
 	});
 
@@ -181,42 +176,12 @@ const yearWindow = (y: number): Window => ({
 	to: `${y}-12-31`,
 });
 
-type Top = {
-	key: string;
-	name: string;
-	artist?: string;
-	uri?: string;
-	plays: number;
-	hours: number;
-};
-
-async function fetchTop(
-	entity: Entity,
+function join(
+	aRows: CompareTop[],
+	bRows: CompareTop[],
 	metric: Metric,
-	w: Window,
-): Promise<Top[]> {
-	if (entity === "artists") {
-		const rows = await api.topArtists(metric, w, 30000, LIMIT);
-		return rows.map((r) => ({
-			key: r.artist,
-			name: r.artist,
-			plays: r.plays,
-			hours: r.hours,
-		}));
-	}
-	const rows = await api.topTracks(metric, w, 30000, LIMIT);
-	return rows.map((r) => ({
-		key: r.track_uri,
-		name: r.name,
-		artist: r.artist,
-		uri: r.track_uri,
-		plays: r.plays,
-		hours: r.hours,
-	}));
-}
-
-function join(aRows: Top[], bRows: Top[], metric: Metric): Joined[] {
-	const val = (t: Top) => (metric === "plays" ? t.plays : t.hours);
+): Joined[] {
+	const val = (t: CompareTop) => (metric === "plays" ? t.plays : t.hours);
 	const aMap = new Map(aRows.map((t, i) => [t.key, { t, rank: i + 1 }]));
 	const bMap = new Map(bRows.map((t, i) => [t.key, { t, rank: i + 1 }]));
 	const keys = new Set([...aMap.keys(), ...bMap.keys()]);

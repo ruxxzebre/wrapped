@@ -1,11 +1,12 @@
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { useSearch } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { api, type PlayRow, type Window } from "../api";
+import type { PlayRow, Window } from "../api";
 import { WindowPicker } from "../controls";
 import { fmtDateTime, fmtDuration } from "../format";
 import { type TFunction, useT } from "../i18n";
 import { ArtistLink, TrackLink } from "../links";
+import { q } from "../queries";
 import {
 	ControlsBar,
 	Field,
@@ -84,12 +85,7 @@ export default function PlayLog() {
 		return () => clearTimeout(t);
 	}, [search]);
 
-	const query = useInfiniteQuery({
-		queryKey: ["plays", debounced, window],
-		queryFn: ({ pageParam }) => api.plays(pageParam, debounced, window),
-		initialPageParam: undefined as string | undefined,
-		getNextPageParam: (last) => last.next_cursor ?? undefined,
-	});
+	const query = useInfiniteQuery(q.plays(debounced, window));
 
 	const rows = useMemo(
 		() => query.data?.pages.flatMap((p) => p.items) ?? [],

@@ -1,7 +1,6 @@
-import { Outlet, useRouterState } from "@tanstack/react-router";
+import { Link, Outlet } from "@tanstack/react-router";
 import { useT } from "../i18n";
-import { navigate } from "../router";
-import { Button } from "../ui";
+import * as buttonCss from "../ui/Button.css";
 import * as css from "./InsightsLayout.css";
 
 // Sub-tabs for the Insights group. "Overview" is the card dashboard (index
@@ -14,19 +13,19 @@ const SUBTABS = [
 
 export default function InsightsLayout() {
 	const t = useT();
-	const pathname = useRouterState({ select: (s) => s.location.pathname });
 	return (
 		<>
 			<div className={css.subnav}>
 				{SUBTABS.map((tab) => (
-					<Button
+					<Link
 						key={tab.slug}
-						variant="nav"
-						active={pathname === tab.slug}
-						onClick={() => navigate(tab.slug)}
+						to={tab.slug}
+						className={buttonCss.variant.nav}
+						activeProps={{ className: buttonCss.navActive }}
+						activeOptions={{ exact: true, includeSearch: false }}
 					>
 						{t(tab.titleKey)}
-					</Button>
+					</Link>
 				))}
 			</div>
 			<Outlet />

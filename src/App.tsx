@@ -1,13 +1,18 @@
 import { useQuery } from "@tanstack/react-query";
-import { Outlet, useMatches, useRouterState } from "@tanstack/react-router";
+import {
+	Link,
+	Outlet,
+	useMatches,
+	useRouterState,
+} from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import * as css from "./App.css";
-import { api } from "./api";
 import CommandPalette from "./components/CommandPalette";
 import { useLang, useT } from "./i18n";
-import { navigate } from "./router";
+import { q } from "./queries";
 import { leafActive, NAV } from "./tabs";
 import { Button, PageHeader, Splash } from "./ui";
+import * as buttonCss from "./ui/Button.css";
 import Import from "./views/Import";
 
 export default function App() {
@@ -27,10 +32,7 @@ export default function App() {
 
 	// Gate the whole app on whether any history has been ingested. Until it has,
 	// the data endpoints would each error, so we show the import screen instead.
-	const { data: status, error: statusError } = useQuery({
-		queryKey: ["status"],
-		queryFn: api.status,
-	});
+	const { data: status, error: statusError } = useQuery(q.status());
 	const [paletteOpen, setPaletteOpen] = useState(false);
 	const [navOpen, setNavOpen] = useState(false);
 	// Which accordion groups are expanded. Seed with the group owning the route
@@ -109,36 +111,33 @@ export default function App() {
 				>
 					☰
 				</button>
-				<a href="#/" className={css.brand}>
+				<Link to="/" className={css.brand}>
 					Wrapped
-				</a>
+				</Link>
 			</div>
 			<aside
 				id="sidebar-nav"
 				className={navOpen ? `${css.sidebar} ${css.sidebarOpen}` : css.sidebar}
 			>
-				<a href="#/" className={css.brand}>
+				<Link to="/" className={css.brand}>
 					Wrapped
-				</a>
+				</Link>
 				<Button variant="chrome" onClick={() => setPaletteOpen(true)}>
 					{t("app.search")} <kbd>Ctrl K</kbd>
 				</Button>
 				<nav className={css.navList}>
 					{NAV.map((g) =>
 						g.kind === "link" ? (
-							<Button
+							<Link
 								key={g.headerKey}
-								variant="nav"
-								active={
-									pathname === g.slug || pathname.startsWith(`${g.slug}/`)
-								}
-								onClick={() => {
-									navigate(g.slug);
-									setNavOpen(false);
-								}}
+								to={g.slug}
+								className={buttonCss.variant.nav}
+								activeProps={{ className: buttonCss.navActive }}
+								activeOptions={{ includeSearch: false }}
+								onClick={() => setNavOpen(false)}
 							>
 								{t(g.headerKey)}
-							</Button>
+							</Link>
 						) : (
 							<div key={g.headerKey} className={css.navGroup}>
 								<button
@@ -155,17 +154,16 @@ export default function App() {
 								{openGroups.has(g.headerKey) && (
 									<div className={css.groupLeaves}>
 										{g.leaves.map((l) => (
-											<Button
+											<Link
 												key={l.slug}
-												variant="nav"
-												active={leafActive(l.slug, pathname)}
-												onClick={() => {
-													navigate(l.slug);
-													setNavOpen(false);
-												}}
+												to={l.slug}
+												className={buttonCss.variant.nav}
+												activeProps={{ className: buttonCss.navActive }}
+												activeOptions={{ exact: true, includeSearch: false }}
+												onClick={() => setNavOpen(false)}
 											>
 												{t(l.titleKey)}
-											</Button>
+											</Link>
 										))}
 									</div>
 								)}

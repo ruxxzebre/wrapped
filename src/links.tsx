@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
+import { Link } from "@tanstack/react-router";
 import { useT } from "./i18n";
 import * as css from "./links.css";
-import { artistPath, Link, trackPath } from "./router";
 import { useSetting } from "./settings";
 import { Muted } from "./ui";
 
@@ -16,7 +16,7 @@ function trackId(uri: string) {
 
 export function TrackLink({ uri, name }: { uri: string; name: string }) {
 	return (
-		<Link to={trackPath(uri)} className={css.entity} title={name}>
+		<Link to="/track/$uri" params={{ uri }} className={css.entity} title={name}>
 			{name}
 		</Link>
 	);
@@ -27,7 +27,8 @@ export function ArtistLink({ name, muted }: { name: string; muted?: boolean }) {
 	if (!name || name === "?") return <Muted>{name || t("common.dash")}</Muted>;
 	return (
 		<Link
-			to={artistPath(name)}
+			to="/artist/$name"
+			params={{ name }}
 			className={muted ? `${css.entity} ${css.entityMuted}` : css.entity}
 			title={name}
 		>

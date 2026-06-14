@@ -15,6 +15,7 @@ export const variant = styleVariants({
 			background: "none",
 			border: "none",
 			color: vars.color.muted,
+			textDecoration: "none",
 			textAlign: "left",
 			width: "100%",
 			padding: "0.5rem 0.9rem",

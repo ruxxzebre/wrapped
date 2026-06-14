@@ -1,31 +1,48 @@
 import { useQuery } from "@tanstack/react-query";
+import { Link } from "@tanstack/react-router";
 import {
 	type KeyboardEvent as ReactKeyboardEvent,
 	useDeferredValue,
 	useMemo,
+	useRef,
 	useState,
 } from "react";
-import { api } from "../api";
 import { fmtInt } from "../format";
 import { useT } from "../i18n";
-import { artistPath, navigate, trackPath } from "../router";
+import { q as queries } from "../queries";
 import { Modal } from "../ui";
 import * as css from "./CommandPalette.css";
 
 type Result =
-	| { type: "artist"; label: string; sub: string; to: string }
-	| { type: "track"; label: string; sub: string; to: string };
+	| {
+			type: "artist";
+			label: string;
+			sub: string;
+			to: "/artist/$name";
+			params: { name: string };
+	  }
+	| {
+			type: "track";
+			label: string;
+			sub: string;
+			to: "/track/$uri";
+			params: { uri: string };
+	  };
+
+function resultKey(result: Result) {
+	return result.type === "artist"
+		? `${result.to}:${result.params.name}`
+		: `${result.to}:${result.params.uri}`;
+}
 
 // Ctrl+K palette. Reuses the Library track dump already in the query cache —
 // no backend call — and derives the artist list from it.
 export default function CommandPalette({ onClose }: { onClose: () => void }) {
 	const t = useT();
-	const { data } = useQuery({
-		queryKey: ["allTracks"],
-		queryFn: api.allTracks,
-	});
+	const { data } = useQuery(queries.allTracks());
 	const [q, setQ] = useState("");
 	const [active, setActive] = useState(0);
+	const activeLinkRef = useRef<HTMLAnchorElement>(null);
 	const query = useDeferredValue(q);
 
 	// Artist → total plays, derived once from the track list.
@@ -49,7 +66,8 @@ export default function CommandPalette({ onClose }: { onClose: () => void }) {
 				type: "artist",
 				label: a.name,
 				sub: t("count.plays", { count: a.plays, n: fmtInt(a.plays) }),
-				to: artistPath(a.name),
+				to: "/artist/$name",
+				params: { name: a.name },
 			}));
 		const trackHits = data.items
 			.filter(
@@ -63,16 +81,11 @@ export default function CommandPalette({ onClose }: { onClose: () => void }) {
 				type: "track",
 				label: tr.name,
 				sub: `${tr.artist} · ${t("count.plays", { count: tr.plays, n: fmtInt(tr.plays) })}`,
-				to: trackPath(tr.track_uri),
+				to: "/track/$uri",
+				params: { uri: tr.track_uri },
 			}));
 		return [...artistHits, ...trackHits];
 	}, [query, data, artists, t]);
-
-	const go = (r?: Result) => {
-		if (!r) return;
-		navigate(r.to);
-		onClose();
-	};
 
 	const onKeyDown = (e: ReactKeyboardEvent) => {
 		if (e.key === "ArrowDown") {
@@ -83,7 +96,7 @@ export default function CommandPalette({ onClose }: { onClose: () => void }) {
 			setActive((i) => Math.max(i - 1, 0));
 		} else if (e.key === "Enter") {
 			e.preventDefault();
-			go(results[active]);
+			activeLinkRef.current?.click();
 		} else if (e.key === "Escape") {
 			onClose();
 		}
@@ -107,20 +120,27 @@ export default function CommandPalette({ onClose }: { onClose: () => void }) {
 			{results.length > 0 && (
 				<ul className={css.results}>
 					{results.map((r, i) => (
-						// biome-ignore lint/a11y/useKeyWithClickEvents: keyboard nav (arrows/Enter) is handled on the search input
-						<li
-							key={`${r.type}:${r.to}`}
-							className={
-								i === active ? `${css.result} ${css.resultActive}` : css.result
-							}
-							onMouseEnter={() => setActive(i)}
-							onClick={() => go(r)}
-						>
-							<span className={css.kind}>
-								{r.type === "artist" ? t("palette.artist") : t("palette.track")}
-							</span>
-							<span className={css.label}>{r.label}</span>
-							<span className={css.sub}>{r.sub}</span>
+						<li key={resultKey(r)}>
+							<Link
+								ref={i === active ? activeLinkRef : undefined}
+								to={r.to}
+								params={r.params}
+								className={
+									i === active
+										? `${css.result} ${css.resultActive}`
+										: css.result
+								}
+								onMouseEnter={() => setActive(i)}
+								onClick={onClose}
+							>
+								<span className={css.kind}>
+									{r.type === "artist"
+										? t("palette.artist")
+										: t("palette.track")}
+								</span>
+								<span className={css.label}>{r.label}</span>
+								<span className={css.sub}>{r.sub}</span>
+							</Link>
 						</li>
 					))}
 				</ul>

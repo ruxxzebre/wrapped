@@ -1,7 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
-import { api, type Metric, type Window } from "./api";
+import type { Metric, Window } from "./api";
 import { useT } from "./i18n";
+import { q } from "./queries";
 import { Field, Input, Select, ToggleGroup } from "./ui";
 
 export function MetricToggle({
@@ -44,10 +45,7 @@ export function WindowPicker({
 	onChange: (w: Window) => void;
 }) {
 	const t = useT();
-	const { data: summary } = useQuery({
-		queryKey: ["summary"],
-		queryFn: api.summary,
-	});
+	const { data: summary } = useQuery(q.summary());
 	const years = (summary?.years ?? []).map((y) => y.year).sort((a, b) => b - a);
 
 	const isAll = !value.from && !value.to;

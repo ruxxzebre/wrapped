@@ -1,9 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
+import { Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { api, type DayCount } from "../api";
+import type { DayCount } from "../api";
 import { fmtHours, fmtInt, monthLabel, weekdayShort } from "../format";
 import { fillNodes, useT } from "../i18n";
-import { navigate } from "../router";
+import { q } from "../queries";
 import { ControlsBar, Field, Panel, Select, Status } from "../ui";
 import * as css from "./Calendar.css";
 
@@ -33,17 +34,13 @@ function level(hours: number, max: number): number {
 
 export default function Calendar() {
 	const t = useT();
-	const { data: summary } = useQuery({
-		queryKey: ["summary"],
-		queryFn: api.summary,
-	});
+	const { data: summary } = useQuery(q.summary());
 	const years = (summary?.years ?? []).map((y) => y.year).sort((a, b) => b - a);
 	const [year, setYear] = useState<number | null>(null);
 	const selected = year ?? years[0] ?? null;
 
 	const { data, error } = useQuery({
-		queryKey: ["calendar", selected],
-		queryFn: () => api.calendar(selected ?? undefined),
+		...q.calendar(selected ?? undefined),
 		enabled: selected !== null || years.length === 0,
 		placeholderData: (prev) => prev,
 	});
@@ -161,8 +158,15 @@ function Heatmap({ year, days }: { year: number; days: DayCount[] }) {
 					{cells.map((c) => {
 						const hours = c.day?.hours ?? 0;
 						const plays = c.day?.plays ?? 0;
-						return (
-							// biome-ignore lint/a11y/noStaticElementInteractions: SVG day cell; same pattern as the sortable VirtualTable headers
+						const title = `${c.date}: ${
+							plays
+								? t("calendar.dayPlays", {
+										plays: fmtInt(plays),
+										hours: fmtHours(hours),
+									})
+								: t("calendar.noPlays")
+						}`;
+						const cell = (
 							<rect
 								key={c.date}
 								x={LEFT + c.col * STEP}
@@ -172,24 +176,31 @@ function Heatmap({ year, days }: { year: number; days: DayCount[] }) {
 								rx={2}
 								fill={LEVELS[level(hours, maxHours)]}
 								className={plays ? `${css.cell} ${css.cellActive}` : css.cell}
-								onClick={
-									plays
-										? () =>
-												navigate(
-													`/explore/play-log?from=${c.date}&to=${c.date}`,
-												)
-										: undefined
-								}
 							>
-								<title>
-									{c.date}:{" "}
-									{plays
-										? t("calendar.dayPlays", {
-												plays: fmtInt(plays),
-												hours: fmtHours(hours),
-											})
-										: t("calendar.noPlays")}
-								</title>
+								<title>{title}</title>
+							</rect>
+						);
+						return plays ? (
+							<Link
+								key={c.date}
+								to="/explore/play-log"
+								search={{ from: c.date, to: c.date }}
+								aria-label={title}
+							>
+								{cell}
+							</Link>
+						) : (
+							<rect
+								key={c.date}
+								x={LEFT + c.col * STEP}
+								y={TOP + c.row * STEP}
+								width={CELL}
+								height={CELL}
+								rx={2}
+								fill={LEVELS[level(hours, maxHours)]}
+								className={css.cell}
+							>
+								<title>{title}</title>
 							</rect>
 						);
 					})}
