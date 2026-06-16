@@ -5,6 +5,7 @@ import { createRoot } from "react-dom/client";
 import "@fontsource-variable/figtree/index.css";
 import "./ui/theme.css";
 import { getConn } from "./db/duckdb";
+import { mark } from "./perf";
 import { queryClient } from "./queryClient";
 import { router } from "./routes.tsx";
 
@@ -48,6 +49,20 @@ router.load().then(() => {
 		}
 	});
 });
+
+// Mark the end of the cold-load path: the first route to resolve — Summary on a
+// normal open, or whatever view a deep link lands on — has its loader settled
+// and is about to paint. The double-rAF defers the mark past the commit so the
+// logged offset reflects pixels on screen, not just data-ready. Dev-only: the
+// whole block is behind import.meta.env.DEV, so Vite strips it from prod.
+if (import.meta.env.DEV) {
+	const unsub = router.subscribe("onResolved", () => {
+		unsub();
+		requestAnimationFrame(() =>
+			requestAnimationFrame(() => mark("first route painted")),
+		);
+	});
+}
 
 const rootEl = document.getElementById("root");
 if (!rootEl) throw new Error("#root element missing from index.html");

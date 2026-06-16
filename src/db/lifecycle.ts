@@ -1,4 +1,5 @@
 import { type Unzipped, unzip } from "fflate";
+import { time } from "../perf";
 import { getSetting } from "../settings";
 import { setBootStatus } from "./boot";
 import { getDB, query } from "./duckdb";
@@ -49,41 +50,47 @@ export async function ensureReady(): Promise<{ ready: boolean }> {
 		await createListensView(currentTz());
 		return { ready: true };
 	}
-	const snap = await loadSnapshot();
+	const snap = await (import.meta.env.DEV
+		? time("load snapshot (opfs)", () => loadSnapshot())
+		: loadSnapshot());
 	if (!snap) return { ready: false };
 
 	setBootStatus("Restoring your library…");
-	const db = await getDB();
-	await db.registerFileBuffer(VFS_SNAPSHOT, snap.buf);
-	try {
-		// The snapshot is the materialized listens table (started_local already
-		// baked), so this is a plain columnar read — no per-row ICU AT TIME ZONE
-		// pass, the slow part of a rebuild on mobile.
+	const restore = async () => {
+		const db = await getDB();
+		await db.registerFileBuffer(VFS_SNAPSHOT, snap.buf);
+		try {
+			// The snapshot is the materialized listens table (started_local already
+			// baked), so this is a plain columnar read — no per-row ICU AT TIME ZONE
+			// pass, the slow part of a rebuild on mobile.
+			await query(
+				`CREATE TABLE listens AS SELECT * FROM read_parquet('${VFS_SNAPSHOT}')`,
+			);
+		} finally {
+			await db.dropFile(VFS_SNAPSHOT).catch(() => {});
+		}
+		// Reconstruct the timezone-independent plays source (drop the derived
+		// columns) so the timezone-change rebuild and the post-import re-assert have
+		// something to read. Cheap in-memory copy; no ICU.
 		await query(
-			`CREATE TABLE listens AS SELECT * FROM read_parquet('${VFS_SNAPSHOT}')`,
+			"CREATE TABLE plays AS SELECT * EXCLUDE (counts_as_stream, was_skipped, started_local) FROM listens",
 		);
-	} finally {
-		await db.dropFile(VFS_SNAPSHOT).catch(() => {});
-	}
-	// Reconstruct the timezone-independent plays source (drop the derived
-	// columns) so the timezone-change rebuild and the post-import re-assert have
-	// something to read. Cheap in-memory copy; no ICU.
-	await query(
-		"CREATE TABLE plays AS SELECT * EXCLUDE (counts_as_stream, was_skipped, started_local) FROM listens",
-	);
-	const tz = currentTz();
-	if (snap.tz === tz) {
-		// Fast path: the snapshot was baked with the active timezone, so the
-		// restored table is already correct — just rebuild the (non-persisted)
-		// index and reset derived caches.
-		await finalizeListens();
-	} else {
-		// Timezone changed since the snapshot was written: recompute started_local
-		// from plays. Rare, so paying for ICU here is fine. Re-snapshot so the
-		// next restore hits the fast path again.
-		await createListensView(tz);
-		await snapshotToOPFS();
-	}
+		const tz = currentTz();
+		if (snap.tz === tz) {
+			// Fast path: the snapshot was baked with the active timezone, so the
+			// restored table is already correct — just rebuild the (non-persisted)
+			// index and reset derived caches.
+			await finalizeListens();
+		} else {
+			// Timezone changed since the snapshot was written: recompute
+			// started_local from plays. Rare, so paying for ICU here is fine.
+			// Re-snapshot so the next restore hits the fast path again.
+			await createListensView(tz);
+			await snapshotToOPFS();
+		}
+	};
+	// Dev-only ternary so the timing call tree-shakes out of prod.
+	await (import.meta.env.DEV ? time("snapshot restore", restore) : restore());
 	playsLoaded = true;
 	return { ready: true };
 }

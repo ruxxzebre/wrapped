@@ -4,7 +4,7 @@ import { useMemo } from "react";
 import type { AlbumRow, TrackRow } from "../api";
 import { fmtDate, fmtHours, fmtInt, fmtPct } from "../format";
 import { type TFunction, useT } from "../i18n";
-import { BackLink, TrackLink, usePrefetchTrackHeads } from "../links";
+import { BackLink, TrackLink, usePrefetchTrackDetails } from "../links";
 import { q } from "../queries";
 import {
 	type Column,
@@ -13,8 +13,9 @@ import {
 	Muted,
 	Panel,
 	Status,
+	WhenVisible,
 } from "../ui";
-import { Cards, MonthlyChart } from "../widgets";
+import { Cards, ChartSkeleton, MonthlyChart } from "../widgets";
 
 const albumColumns = (t: TFunction): Column<AlbumRow>[] => [
 	{ key: "album", header: t("col.album"), cell: (a) => a.album },
@@ -81,8 +82,8 @@ export default function ArtistDetail() {
 	const detail = useQuery(q.artist(name));
 	const tracks = useQuery(q.artistTracks(name));
 
-	// Batch-warm the cards for this artist's track list (all linkable below).
-	usePrefetchTrackHeads(tracks.data?.map((row) => row.track_uri) ?? []);
+	// Batch-warm the full detail for this artist's track list (all linkable below).
+	usePrefetchTrackDetails(tracks.data?.map((row) => row.track_uri) ?? []);
 
 	// "Deep cuts vs hits": share of plays concentrated in the top 3 tracks.
 	const top3Share = useMemo(() => {
@@ -137,7 +138,9 @@ export default function ArtistDetail() {
 			<Cards items={cards} />
 
 			<Panel title={t("artist.hoursPerMonth")}>
-				<MonthlyChart data={d.monthly} metric="hours" area />
+				<WhenVisible fallback={<ChartSkeleton height={240} />}>
+					<MonthlyChart data={d.monthly} metric="hours" area />
+				</WhenVisible>
 			</Panel>
 
 			{d.albums.length > 0 && (

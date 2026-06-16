@@ -4,7 +4,7 @@ import type { Metric, Period } from "../api";
 import { MetricToggle, WindowPicker } from "../controls";
 import { fmtInt } from "../format";
 import { useT } from "../i18n";
-import { ArtistLink, TrackLink, usePrefetchTrackHeads } from "../links";
+import { ArtistLink, TrackLink, usePrefetchTrackDetails } from "../links";
 import { type CompareTop, q } from "../queries";
 import {
 	type Column,
@@ -62,7 +62,7 @@ export default function Compare() {
 	);
 
 	// In the tracks view each joined row links to a track detail — warm them.
-	usePrefetchTrackHeads(rows.flatMap((r) => (r.uri ? [r.uri] : [])));
+	usePrefetchTrackDetails(rows.flatMap((r) => (r.uri ? [r.uri] : [])));
 
 	const unit = metric === "plays" ? t("unit.plays") : t("unit.hrs");
 	const columns = useMemo<Column<Joined>[]>(

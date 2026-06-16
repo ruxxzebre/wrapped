@@ -111,11 +111,10 @@ export type TrackComeback = {
 	plays_30d: number;
 }; // §K
 
-// The above-the-fold half of a track page: the title row + the headline cards.
-// Cheap to compute (one filtered scan + two session-memoized globals) and — the
-// reason for the split — batchable across many tracks in a single query, so a
-// table of track links can warm every row's cards in one round-trip. See
-// `trackHeads` and `usePrefetchTrackHeads`.
+// The card half of a track page: the title row + the headline cards. Cheap to
+// compute (one filtered scan + two session-memoized globals) and batchable
+// across many tracks, so a table of track links warms every row in one pass.
+// Folded into `TrackDetail` alongside the panels; see `trackDetails`.
 export type TrackHead = {
 	track_uri: string;
 	name: string;
@@ -428,12 +427,12 @@ export const api = {
 	plays: (cursor: string | undefined, search: string, p: Period) =>
 		q.plays(cursor, search, p),
 
-	// Track detail, split for preloading: `trackHead` is the cheap, batchable
-	// card data; `trackDeep` is the heavy panels loaded on mount. `trackHeads`
-	// warms many heads at once (one query) for list pages full of track links.
-	trackHead: (uri: string) => q.trackHead(uri),
-	trackHeads: (uris: string[]) => q.trackHeads(uris),
-	trackDeep: (uri: string) => q.trackDeep(uri),
+	// Track detail (cards + every panel) in one shot. `trackDetails` batches a
+	// screenful of track links into a single pass — the per-track panels collapse
+	// to one grouped scan each and the global passes are read from memoized maps,
+	// so a list warms every visible row at once instead of N full opens.
+	trackDetail: (uri: string) => q.trackDetail(uri),
+	trackDetails: (uris: string[]) => q.trackDetails(uris),
 
 	artist: (name: string) => q.artist(name),
 	artistTracks: (name: string) => q.artistTracks(name),

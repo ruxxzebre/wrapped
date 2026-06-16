@@ -2,6 +2,7 @@ import * as duckdb from "@duckdb/duckdb-wasm";
 import ehWorkerUrl from "@duckdb/duckdb-wasm/dist/duckdb-browser-eh.worker.js?url";
 import ehWasmUrl from "@duckdb/duckdb-wasm/dist/duckdb-eh.wasm?url";
 import { type Table, Type } from "apache-arrow";
+import { time, timeSql } from "../perf";
 import { setBootStatus } from "./boot";
 
 // DuckDB-WASM bootstrap. Bundles are vite-bundled (?url imports) rather than
@@ -35,21 +36,40 @@ async function init(): Promise<duckdb.AsyncDuckDB> {
 
 /** Memoized database instance; also defuses StrictMode double-init. */
 export function getDB(): Promise<duckdb.AsyncDuckDB> {
-	dbPromise ??= init();
+	dbPromise ??= import.meta.env.DEV ? time("engine boot", init) : init();
 	return dbPromise;
 }
 
 async function openConn(): Promise<duckdb.AsyncDuckDBConnection> {
 	const db = await getDB();
 	const conn = await db.connect();
-	// AT TIME ZONE needs icu. In WASM it's a dynamically loaded extension
-	// fetched from the default extension repository on first load.
-	setBootStatus("Loading timezone extension…");
-	await conn.query("INSTALL icu");
-	await conn.query("LOAD icu");
-	// All queries use explicit AT TIME ZONE conversions; pin the session TZ so
-	// timestamp casts never depend on the browser's locale.
-	await conn.query("SET TimeZone = 'UTC'");
+	const loadExtensions = async () => {
+		// AT TIME ZONE needs icu. In WASM it's a dynamically loaded extension
+		// fetched from the default extension repository on first load.
+		setBootStatus("Loading timezone extension…");
+		await conn.query("INSTALL icu");
+		await conn.query("LOAD icu");
+		// `to_json` (track-detail batch) needs the json extension. It's statically
+		// linked in the wasm build, so a bare LOAD suffices; fall back to INSTALL for
+		// any build where it isn't, and ignore if it's already available.
+		try {
+			await conn.query("LOAD json");
+		} catch {
+			try {
+				await conn.query("INSTALL json");
+				await conn.query("LOAD json");
+			} catch {}
+		}
+		// All queries use explicit AT TIME ZONE conversions; pin the session TZ so
+		// timestamp casts never depend on the browser's locale.
+		await conn.query("SET TimeZone = 'UTC'");
+	};
+	// Timed as its own stage (disjoint from engine boot, already timed in getDB):
+	// the icu fetch is a network round-trip on a cold cache and the long pole here.
+	// Dev-only ternary so the timing call tree-shakes out of prod.
+	await (import.meta.env.DEV
+		? time("extensions (icu/json)", loadExtensions)
+		: loadExtensions());
 	return conn;
 }
 
@@ -98,13 +118,20 @@ function tableToRows(table: Table): Record<string, unknown>[] {
  */
 export async function query<T>(sql: string, params?: unknown[]): Promise<T[]> {
 	const conn = await getConn();
-	if (!params || params.length === 0) {
-		return tableToRows(await conn.query(sql)) as T[];
-	}
-	const stmt = await conn.prepare(sql);
-	try {
-		return tableToRows(await stmt.query(...params)) as T[];
-	} finally {
-		await stmt.close();
-	}
+	const exec = async (): Promise<T[]> => {
+		if (!params || params.length === 0) {
+			return tableToRows(await conn.query(sql)) as T[];
+		}
+		const stmt = await conn.prepare(sql);
+		try {
+			return tableToRows(await stmt.query(...params)) as T[];
+		} finally {
+			await stmt.close();
+		}
+	};
+	// Per-SQL timing wraps execution only (the getConn() await above is the boot
+	// stages, timed separately). The import.meta.env.DEV ternary folds to `exec()`
+	// in prod, so timeSql drops out of this hot path entirely — no wrapper call
+	// per query. Dev keeps the timing.
+	return import.meta.env.DEV ? timeSql(sql, exec) : exec();
 }

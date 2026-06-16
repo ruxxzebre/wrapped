@@ -4,7 +4,7 @@ import type { Metric, Period, TopTrack } from "../api";
 import { MetricToggle, NumberInput, WindowPicker } from "../controls";
 import { fmtHours, fmtInt } from "../format";
 import { type TFunction, useT } from "../i18n";
-import { ArtistLink, TrackLink, usePrefetchTrackHeads } from "../links";
+import { ArtistLink, TrackLink, usePrefetchTrackDetails } from "../links";
 import { q } from "../queries";
 import {
 	type Column,
@@ -61,9 +61,9 @@ export default function TopTracks() {
 		placeholderData: (prev) => prev,
 	});
 
-	// Warm every visible row's track-detail cards in one batched query, so
-	// clicking through reads from cache instead of opening cold.
-	usePrefetchTrackHeads(data?.map((track) => track.track_uri) ?? []);
+	// Warm every visible row's full track detail in one batched pass, so clicking
+	// through paints from cache instead of opening cold.
+	usePrefetchTrackDetails(data?.map((track) => track.track_uri) ?? []);
 
 	return (
 		<>

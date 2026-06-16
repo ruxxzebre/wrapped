@@ -37,14 +37,11 @@ import type {
 	Summary,
 	TopArtist,
 	TopTrack,
-	TrackComeback,
-	TrackDeep,
+	TrackDetail,
 	TrackHead,
 	TrackLoop,
-	TrackMilestone,
 	TrackOrigin,
 	TrackRow,
-	TrackSeason,
 	TracksPage,
 	WeekendSplit,
 	YearArtistDelta,
@@ -127,10 +124,27 @@ const METRICS: Record<Metric, string> = {
 let baselineSkipPromise: Promise<number> | null = null;
 let rankMapPromise: Promise<Map<string, number>> | null = null;
 
+// The global-window passes behind a track's deep panels — segue (LAG/LEAD over
+// the whole ordered log), origin, the repeat-one run map, and per-year rank —
+// are identical for every track, yet each open used to recompute them and filter
+// to one uri. Compute each once per dataset, keyed by track_uri, and let every
+// open (single or batched) read its slice. Same memoize-the-promise discipline as
+// the two caches above; resetTrackCaches() clears them when listens is rebuilt.
+let segueMapPromise: Promise<Map<string, SegueEntry>> | null = null;
+let originMapPromise: Promise<Map<string, TrackOrigin>> | null = null;
+let loopMapPromise: Promise<Map<string, TrackLoop>> | null = null;
+let rankYearlyMapPromise: Promise<Map<string, RankYear[]>> | null = null;
+
 export function resetTrackCaches(): void {
 	baselineSkipPromise = null;
 	rankMapPromise = null;
+	segueMapPromise = null;
+	originMapPromise = null;
+	loopMapPromise = null;
+	rankYearlyMapPromise = null;
 }
+
+type SegueEntry = { before: Neighbor[]; after: Neighbor[] };
 
 /** Library-wide skip rate — the baseline a track's own rate is compared against. */
 function librarySkipRate(): Promise<number> {
@@ -407,7 +421,6 @@ export async function topTracks(
 	minMs: number,
 	limit: number,
 ): Promise<TopTrack[]> {
-	console.log("get top tracks");
 	const conds = ["ms_played >= ?"];
 	const args: unknown[] = [minMs];
 	periodWhere(p, conds, args);
@@ -567,76 +580,46 @@ function monthly(where: string, arg: string): Promise<MonthCount[]> {
 	);
 }
 
-// completion bins each play by how much of the track's longest observed
-// length it covered — did you finish it, bail, or barely start it?
-async function completion(uri: string): Promise<LabelCount[]> {
-	const bands = await query<LabelCount>(
-		`
-		WITH t AS (
-			SELECT ms_played, max(ms_played) OVER () AS maxms
-			FROM listens WHERE track_uri = ?
-		)
-		SELECT CASE
-			WHEN maxms = 0 OR maxms IS NULL THEN 'unknown'
-			WHEN ms_played >= maxms * 0.9 THEN 'finished'
-			WHEN ms_played >= maxms * 0.5 THEN 'most'
-			WHEN ms_played >= maxms * 0.1 THEN 'partial'
-			ELSE 'bailed'
-		END AS label, count(*) AS plays
-		FROM t GROUP BY label`,
-		[uri],
-	);
-	const got = new Map(bands.map((b) => [b.label, b.plays]));
-	// Emit in a fixed, meaningful order so the frontend renders a stable bar.
-	const out: LabelCount[] = [];
-	for (const label of ["finished", "most", "partial", "bailed", "unknown"]) {
-		const plays = got.get(label);
-		if (plays !== undefined) out.push({ label, plays });
+// Bucket query rows by track_uri, preserving row order within each track (so a
+// query's ORDER BY carries through to the per-track array).
+function groupByUri<T extends { track_uri: string }>(
+	rows: T[],
+): Map<string, T[]> {
+	const m = new Map<string, T[]>();
+	for (const r of rows) {
+		const a = m.get(r.track_uri);
+		if (a) a.push(r);
+		else m.set(r.track_uri, [r]);
 	}
-	return out;
+	return m;
 }
 
-// completionYearly trends the §16 attention math for one track: the mean
-// fraction of its (longest-observed) length actually played, per year — a
-// boredom curve.
-function completionYearly(uri: string): Promise<CompletionYear[]> {
-	return query<CompletionYear>(
-		`
-		WITH t AS (
-			SELECT year(started_local) AS y, ms_played,
-			       max(ms_played) OVER () AS maxms
-			FROM listens WHERE track_uri = ?
-		)
-		SELECT y AS year,
-		       avg(least(ms_played::DOUBLE / nullif(maxms, 0), 1.0)) AS avg_completion
-		FROM t GROUP BY y ORDER BY y`,
-		[uri],
-	);
-}
+// --- Hoisted global passes (computed once per dataset, keyed by track_uri) ----
 
-// rankYearly is this track's rank among all tracks within each year — its
-// personal chart position over time (lower = higher; 1 = your #1 that year).
-function rankYearly(uri: string): Promise<RankYear[]> {
-	return query<RankYear>(
+// §I rankYearly for every track at once: rank among all tracks within each year.
+// Identical window to the old per-track query, just collected for all tracks.
+function rankYearlyMap(): Promise<Map<string, RankYear[]>> {
+	rankYearlyMapPromise ??= query<{ track_uri: string } & RankYear>(
 		`
 		WITH r AS (
 			SELECT track_uri, year(started_local) AS y,
 			       RANK() OVER (PARTITION BY year(started_local) ORDER BY count(*) DESC) AS "rank"
 			FROM listens GROUP BY track_uri, year(started_local)
 		)
-		SELECT y AS year, "rank" FROM r WHERE track_uri = ? ORDER BY y`,
-		[uri],
-	);
+		SELECT track_uri, y AS year, "rank" FROM r ORDER BY track_uri, y`,
+	).then((rows) => groupByUri(rows));
+	return rankYearlyMapPromise;
 }
 
-// §A Segue map: the tracks most often heard immediately before/after this one.
-// One global LAG/LEAD pass over the timeline; a 30-minute start-to-start guard
-// keeps overnight gaps from stitching unrelated sessions together, and
-// self-transitions (repeat-one loops) are excluded — those belong to §F.
-async function segue(
-	uri: string,
-): Promise<{ before: Neighbor[]; after: Neighbor[] }> {
-	const rows = await query<Neighbor & { dir: "before" | "after" }>(
+// §A Segue map for every track: the tracks most often heard immediately
+// before/after each one. One global LAG/LEAD pass over the timeline; the 30-min
+// start-to-start guard keeps overnight gaps from stitching unrelated sessions,
+// and self-transitions (repeat-one loops) are excluded — those belong to §F.
+// QUALIFY keeps the top 5 per (track, direction).
+function segueMap(): Promise<Map<string, SegueEntry>> {
+	segueMapPromise ??= query<
+		Neighbor & { cur: string; dir: "before" | "after" }
+	>(
 		`
 		WITH seq AS (
 			SELECT track_uri AS cur, started_local AS cur_ts,
@@ -652,205 +635,134 @@ async function segue(
 			WINDOW w AS (ORDER BY started_local, track_uri)
 		),
 		nb AS (
-			SELECT 'after' AS dir, next_uri AS track_uri,
+			SELECT cur, 'after' AS dir, next_uri AS track_uri,
 			       COALESCE(max(next_name), '?')   AS name,
 			       COALESCE(max(next_artist), '?') AS artist,
 			       count(*) AS plays
 			FROM seq
-			WHERE cur = ? AND next_uri IS NOT NULL AND next_uri <> ?
+			WHERE next_uri IS NOT NULL AND next_uri <> cur
 			  AND next_ts - cur_ts < INTERVAL '30 minutes'
-			GROUP BY next_uri
+			GROUP BY cur, next_uri
 			UNION ALL
-			SELECT 'before', prev_uri,
+			SELECT cur, 'before', prev_uri,
 			       COALESCE(max(prev_name), '?'),
 			       COALESCE(max(prev_artist), '?'),
 			       count(*)
 			FROM seq
-			WHERE cur = ? AND prev_uri IS NOT NULL AND prev_uri <> ?
+			WHERE prev_uri IS NOT NULL AND prev_uri <> cur
 			  AND cur_ts - prev_ts < INTERVAL '30 minutes'
-			GROUP BY prev_uri
+			GROUP BY cur, prev_uri
 		)
-		SELECT dir, track_uri, name, artist, plays FROM nb
-		QUALIFY ROW_NUMBER() OVER (PARTITION BY dir ORDER BY plays DESC) <= 5
-		ORDER BY dir, plays DESC`,
-		[uri, uri, uri, uri],
-	);
-	const pick = (dir: "before" | "after"): Neighbor[] =>
-		rows
-			.filter((r) => r.dir === dir)
-			.map((r) => ({
+		SELECT cur, dir, track_uri, name, artist, plays FROM nb
+		QUALIFY ROW_NUMBER() OVER (PARTITION BY cur, dir ORDER BY plays DESC) <= 5
+		ORDER BY cur, dir, plays DESC`,
+	).then((rows) => {
+		const m = new Map<string, SegueEntry>();
+		for (const r of rows) {
+			let e = m.get(r.cur);
+			if (!e) {
+				e = { before: [], after: [] };
+				m.set(r.cur, e);
+			}
+			const n: Neighbor = {
 				track_uri: r.track_uri,
 				name: r.name,
 				artist: r.artist,
 				plays: r.plays,
-			}));
-	return { before: pick("before"), after: pick("after") };
+			};
+			(r.dir === "before" ? e.before : e.after).push(n);
+		}
+		return m;
+	});
+	return segueMapPromise;
 }
 
-// §B Origin: the very first play of this track, fleshed out — plus the track
-// played right before it (the gateway).
-async function origin(uri: string): Promise<TrackOrigin | null> {
-	const first = (
-		await query<{
-			date: string;
-			weekday: string;
-			platform: string;
-			reason_start: string;
-			ts: string;
-		}>(
-			`
-			SELECT strftime(CAST(started_local AS DATE), '%Y-%m-%d') AS date,
+// §B Origin map for every track: each track's first play, fleshed out, plus the
+// track played right before it (the gateway). Because it's the *first* play, the
+// row immediately before it in the global order is necessarily a different track
+// — except for the degenerate case of duplicate rows sharing the exact first
+// timestamp, where prev_uri == cur and we drop the gateway (matches the old
+// `track_uri <> uri` guard).
+function originMap(): Promise<Map<string, TrackOrigin>> {
+	originMapPromise ??= query<{
+		track_uri: string;
+		date: string;
+		weekday: string;
+		platform: string;
+		reason_start: string;
+		prev_uri: string | null;
+		prev_name: string | null;
+		prev_artist: string | null;
+	}>(
+		`
+		WITH seq AS (
+			SELECT track_uri, started_local,
+			       strftime(CAST(started_local AS DATE), '%Y-%m-%d') AS date,
 			       dayname(started_local)                            AS weekday,
 			       COALESCE(platform, '?')                           AS platform,
 			       COALESCE(reason_start, '?')                       AS reason_start,
-			       strftime(started_local, '%Y-%m-%d %H:%M:%S')      AS ts
-			FROM listens WHERE track_uri = ?
-			ORDER BY started_local ASC LIMIT 1`,
-			[uri],
-		)
-	)[0];
-	if (!first) return null;
-
-	const gateway = (
-		await query<{ prev_uri: string; prev_name: string; prev_artist: string }>(
-			`
-			SELECT track_uri AS prev_uri,
-			       COALESCE(track_name, '?')  AS prev_name,
-			       COALESCE(artist_name, '?') AS prev_artist
+			       LAG(track_uri)   OVER w AS prev_uri,
+			       LAG(track_name)  OVER w AS prev_name,
+			       LAG(artist_name) OVER w AS prev_artist,
+			       ROW_NUMBER() OVER (PARTITION BY track_uri ORDER BY started_local) AS rn
 			FROM listens
-			WHERE started_local < CAST(? AS TIMESTAMP) AND track_uri <> ?
-			ORDER BY started_local DESC LIMIT 1`,
-			[first.ts, uri],
+			WINDOW w AS (ORDER BY started_local, track_uri)
 		)
-	)[0];
-
-	return {
-		date: first.date,
-		weekday: first.weekday,
-		platform: first.platform,
-		reason_start: first.reason_start,
-		prev_uri: gateway?.prev_uri ?? null,
-		prev_name: gateway?.prev_name ?? "",
-		prev_artist: gateway?.prev_artist ?? "",
-	};
+		SELECT track_uri, date, weekday, platform, reason_start,
+		       prev_uri, prev_name, prev_artist
+		FROM seq WHERE rn = 1`,
+	).then((rows) => {
+		const m = new Map<string, TrackOrigin>();
+		for (const r of rows) {
+			const sameTrack = r.prev_uri === r.track_uri;
+			m.set(r.track_uri, {
+				date: r.date,
+				weekday: r.weekday,
+				platform: r.platform,
+				reason_start: r.reason_start,
+				prev_uri: sameTrack ? null : (r.prev_uri ?? null),
+				prev_name: sameTrack ? "" : (r.prev_name ?? ""),
+				prev_artist: sameTrack ? "" : (r.prev_artist ?? ""),
+			});
+		}
+		return m;
+	});
+	return originMapPromise;
 }
 
-// §F The longest back-to-back consecutive run of this track (gaps-and-islands on
-// the global timeline, then filtered to this track), and the count of days it
-// was binged (≥3 plays in one calendar day).
-async function trackLoop(uri: string): Promise<TrackLoop | null> {
-	const r = (
-		await query<TrackLoop>(
-			`
-			WITH flagged AS (
-				SELECT track_uri, started_local,
-				       CASE WHEN LAG(track_uri) OVER (ORDER BY started_local) = track_uri
-				            THEN 0 ELSE 1 END AS is_new
-				FROM listens
-			),
-			runs AS (
-				SELECT *, sum(is_new) OVER (ORDER BY started_local) AS run_id FROM flagged
-			)
-			SELECT count(*) AS longest_run, strftime(min(started_local), '%Y-%m-%d') AS date
-			FROM runs WHERE track_uri = ?
-			GROUP BY run_id ORDER BY longest_run DESC LIMIT 1`,
-			[uri],
+// §F Repeat-one loop map for every track: the longest back-to-back consecutive
+// run of each track (gaps-and-islands on the global timeline, then the longest
+// island per track). Runs of length < 2 are dropped, so a track absent from the
+// map simply never repeated.
+function loopMap(): Promise<Map<string, TrackLoop>> {
+	loopMapPromise ??= query<{ track_uri: string } & TrackLoop>(
+		`
+		WITH flagged AS (
+			SELECT track_uri, started_local,
+			       CASE WHEN LAG(track_uri) OVER (ORDER BY started_local) = track_uri
+			            THEN 0 ELSE 1 END AS is_new
+			FROM listens
+		),
+		runs AS (
+			SELECT *, sum(is_new) OVER (ORDER BY started_local) AS run_id FROM flagged
+		),
+		per AS (
+			SELECT track_uri, count(*) AS longest_run,
+			       strftime(min(started_local), '%Y-%m-%d') AS date
+			FROM runs GROUP BY track_uri, run_id
 		)
-	)[0];
-	return r && r.longest_run >= 2 ? r : null;
+		SELECT track_uri, longest_run, date FROM per
+		QUALIFY ROW_NUMBER() OVER (PARTITION BY track_uri ORDER BY longest_run DESC) = 1`,
+	).then((rows) => {
+		const m = new Map<string, TrackLoop>();
+		for (const r of rows) {
+			if (r.longest_run >= 2)
+				m.set(r.track_uri, { longest_run: r.longest_run, date: r.date });
+		}
+		return m;
+	});
+	return loopMapPromise;
 }
-
-async function bingeDays(uri: string): Promise<number> {
-	const r = (
-		await query<{ n: number }>(
-			`
-			SELECT count(*) AS n FROM (
-				SELECT CAST(started_local AS DATE) AS d
-				FROM listens WHERE track_uri = ?
-				GROUP BY d HAVING count(*) >= 3
-			)`,
-			[uri],
-		)
-	)[0];
-	return r?.n ?? 0;
-}
-
-// §G Seasonal concentration for one track: circular resultant length over
-// month-of-year (1 = locked to one season, 0 = spread year-round) and the
-// resultant's direction as a 0-based peak month. Mirrors §15 `seasonal`.
-async function trackSeason(uri: string): Promise<TrackSeason | null> {
-	const r = (
-		await query<TrackSeason>(
-			`
-			WITH m AS (
-				SELECT count(*) AS plays,
-				       count(DISTINCT year(started_local)) AS years,
-				       sum(cos(2 * pi() * (month(started_local) - 1) / 12.0)) AS sc,
-				       sum(sin(2 * pi() * (month(started_local) - 1) / 12.0)) AS ss
-				FROM listens WHERE track_uri = ?
-			)
-			SELECT ((CAST(round(atan2(ss, sc) / (2 * pi()) * 12) AS INTEGER) % 12) + 12) % 12
-			           AS peak_month,
-			       sqrt(sc * sc + ss * ss) / plays AS concentration,
-			       years
-			FROM m WHERE plays > 0`,
-			[uri],
-		)
-	)[0];
-	return r ?? null;
-}
-
-// §J The date you crossed the largest round play-count milestone you've reached.
-async function milestone(
-	uri: string,
-	plays: number,
-): Promise<TrackMilestone | null> {
-	const n = [1000, 500, 250, 100, 50, 25, 10].find((tier) => plays >= tier);
-	if (!n) return null;
-	const r = (
-		await query<{ date: string }>(
-			`
-			SELECT strftime(CAST(started_local AS DATE), '%Y-%m-%d') AS date FROM (
-				SELECT started_local, ROW_NUMBER() OVER (ORDER BY started_local) AS rn
-				FROM listens WHERE track_uri = ?
-			) WHERE rn = ?`,
-			[uri, n],
-		)
-	)[0];
-	return r ? { n, date: r.date } : null;
-}
-
-// §K Did this track come back from the dead? The §18 rediscovery rule scoped to
-// one track: its longest silence (≥6 months) that was followed by a real
-// revival (≥5 plays in the next 30 days).
-async function trackComeback(uri: string): Promise<TrackComeback | null> {
-	const r = (
-		await query<TrackComeback>(
-			`
-			WITH g AS (
-				SELECT ts,
-				       date_diff('day', LAG(ts) OVER (PARTITION BY track_uri ORDER BY ts), ts)
-				           AS gap_days,
-				       count(*) OVER (
-				           PARTITION BY track_uri ORDER BY ts
-				           RANGE BETWEEN CURRENT ROW AND INTERVAL '30 days' FOLLOWING
-				       ) AS plays_30d
-				FROM listens WHERE track_uri = ?
-			)
-			SELECT strftime(ts, '%Y-%m-%d') AS date, gap_days, plays_30d
-			FROM g WHERE gap_days >= 180 AND plays_30d >= 5
-			ORDER BY gap_days DESC, plays_30d DESC LIMIT 1`,
-			[uri],
-		)
-	)[0];
-	return r ?? null;
-}
-
-// Monotonic suffix for the per-call prefilter temp table. The connection is
-// shared, so a preload-on-intent can fire track() for a second uri while the
-// first is mid-flight; a unique name per call keeps the two from clobbering each
-// other's temp table.
-let trkSeq = 0;
 
 // The headline aggregates every head needs, computed straight off `listens`.
 // GROUP BY track_uri so the exact same SELECT serves one track or a batch — the
@@ -901,177 +813,292 @@ function toHead(
 	};
 }
 
-// The above-the-fold half of a track page: title row + headline cards. One
-// filtered scan plus the two session-memoized globals (baseline skip, rank
-// map) — cheap enough to warm on hover/dwell and the part navigation shows
-// instantly while `trackDeep` streams the panels in.
-export async function trackHead(uri: string): Promise<TrackHead> {
-	const [rows, skip_ratio_all, rank_plays] = await Promise.all([
-		query<HeadAgg>(
-			`SELECT ${HEAD_AGG} FROM listens WHERE track_uri = ? GROUP BY track_uri`,
-			[uri],
-		),
-		librarySkipRate(),
-		trackRankMap().then((m) => m.get(uri) ?? 0),
-	]);
-	const row = rows[0];
-	if (!row || row.plays === 0) throw new Error("not found");
-	return toHead(row, skip_ratio_all, rank_plays);
+// The §D completion bands, in the fixed order the frontend renders them.
+const COMPLETION_ORDER = ["finished", "most", "partial", "bailed", "unknown"];
+
+function orderCompletion(rows: LabelCount[]): LabelCount[] {
+	const got = new Map(rows.map((b) => [b.label, b.plays]));
+	const out: LabelCount[] = [];
+	for (const label of COMPLETION_ORDER) {
+		const plays = got.get(label);
+		if (plays !== undefined) out.push({ label, plays });
+	}
+	return out;
 }
 
-// Batch the head aggregate for many tracks in a single scan: a table of track
-// links (TopTracks, ArtistDetail, …) warms every visible row's cards in one
-// round-trip instead of N full track opens against the single worker. Order is
-// not guaranteed — callers index by track_uri. URIs absent from `listens` are
-// simply missing from the result.
-export async function trackHeads(uris: string[]): Promise<TrackHead[]> {
+// One row per requested track, every list-valued panel rolled up into a JSON
+// string with `to_json(list(struct_pack(...)))` so the whole batch comes back in
+// a single statement. A `base` CTE filters `listens` to the requested uris once;
+// each panel CTE aggregates off it and the final SELECT stitches them by
+// track_uri. The four global-window panels (segue/origin/loop/rank-by-year) are
+// NOT here — they stay in the session-memoized maps so they're computed once over
+// the whole log, not per batch.
+function detailSql(placeholders: string): string {
+	return `
+	WITH base AS (
+		SELECT * FROM listens WHERE track_uri IN (${placeholders})
+	),
+	head AS (SELECT ${HEAD_AGG} FROM base GROUP BY track_uri),
+	monthly AS (
+		SELECT track_uri, to_json(list(struct_pack(month := month, plays := plays, hours := hours) ORDER BY month))::VARCHAR AS monthly
+		FROM (
+			SELECT track_uri, strftime(date_trunc('month', started_local), '%Y-%m') AS month,
+			       count(*) AS plays, sum(ms_played) / 3600000.0 AS hours
+			FROM base GROUP BY track_uri, month
+		) GROUP BY track_uri
+	),
+	hourly AS (
+		SELECT track_uri, to_json(list(struct_pack(bucket := bucket, plays := plays, hours := hours) ORDER BY bucket))::VARCHAR AS hourly
+		FROM (
+			SELECT track_uri, hour(started_local) AS bucket, count(*) AS plays,
+			       sum(ms_played) / 3600000.0 AS hours
+			FROM base GROUP BY track_uri, bucket
+		) GROUP BY track_uri
+	),
+	weekly AS (
+		SELECT track_uri, to_json(list(struct_pack(bucket := bucket, plays := plays, hours := hours) ORDER BY bucket))::VARCHAR AS weekly
+		FROM (
+			SELECT track_uri, isodow(started_local) AS bucket, count(*) AS plays,
+			       sum(ms_played) / 3600000.0 AS hours
+			FROM base GROUP BY track_uri, bucket
+		) GROUP BY track_uri
+	),
+	platforms AS (
+		SELECT track_uri, to_json(list(struct_pack(label := label, plays := plays) ORDER BY plays DESC))::VARCHAR AS platforms
+		FROM (
+			SELECT track_uri, platform AS label, count(*) AS plays
+			FROM base GROUP BY track_uri, platform
+		) GROUP BY track_uri
+	),
+	rstart AS (
+		SELECT track_uri, to_json(list(struct_pack(label := label, plays := plays) ORDER BY plays DESC))::VARCHAR AS reason_start
+		FROM (
+			SELECT track_uri, COALESCE(reason_start, '?') AS label, count(*) AS plays
+			FROM base GROUP BY track_uri, COALESCE(reason_start, '?')
+		) GROUP BY track_uri
+	),
+	rend AS (
+		SELECT track_uri, to_json(list(struct_pack(label := label, plays := plays) ORDER BY plays DESC))::VARCHAR AS reason_end
+		FROM (
+			SELECT track_uri, COALESCE(reason_end, '?') AS label, count(*) AS plays
+			FROM base GROUP BY track_uri, COALESCE(reason_end, '?')
+		) GROUP BY track_uri
+	),
+	ctry AS (
+		SELECT track_uri, to_json(list(struct_pack(label := label, plays := plays) ORDER BY plays DESC))::VARCHAR AS countries
+		FROM (
+			SELECT track_uri, COALESCE(conn_country, '?') AS label, count(*) AS plays
+			FROM base GROUP BY track_uri, COALESCE(conn_country, '?')
+		) GROUP BY track_uri
+	),
+	comp AS (
+		SELECT track_uri, to_json(list(struct_pack(label := label, plays := plays)))::VARCHAR AS completion
+		FROM (
+			SELECT track_uri, CASE
+				WHEN maxms = 0 OR maxms IS NULL THEN 'unknown'
+				WHEN ms_played >= maxms * 0.9 THEN 'finished'
+				WHEN ms_played >= maxms * 0.5 THEN 'most'
+				WHEN ms_played >= maxms * 0.1 THEN 'partial'
+				ELSE 'bailed'
+			END AS label, count(*) AS plays
+			FROM (SELECT track_uri, ms_played, max(ms_played) OVER (PARTITION BY track_uri) AS maxms FROM base)
+			GROUP BY track_uri, label
+		) GROUP BY track_uri
+	),
+	compy AS (
+		SELECT track_uri, to_json(list(struct_pack(year := yr, avg_completion := avg_completion) ORDER BY yr))::VARCHAR AS completion_yearly
+		FROM (
+			SELECT track_uri, year(started_local) AS yr,
+			       avg(least(ms_played::DOUBLE / nullif(maxms, 0), 1.0)) AS avg_completion
+			FROM (SELECT track_uri, started_local, ms_played, max(ms_played) OVER (PARTITION BY track_uri) AS maxms FROM base)
+			GROUP BY track_uri, yr
+		) GROUP BY track_uri
+	),
+	shuffle AS (
+		SELECT track_uri,
+		       avg(CASE WHEN shuffle THEN 1.0 ELSE 0.0 END) AS shuffle_ratio,
+		       avg(CASE WHEN was_skipped THEN 1.0 ELSE 0.0 END) FILTER (WHERE shuffle) AS skip_shuffle,
+		       avg(CASE WHEN was_skipped THEN 1.0 ELSE 0.0 END) FILTER (WHERE NOT COALESCE(shuffle, false)) AS skip_intentional
+		FROM base GROUP BY track_uri
+	),
+	season AS (
+		SELECT track_uri,
+		       ((CAST(round(atan2(ss, sc) / (2 * pi()) * 12) AS INTEGER) % 12) + 12) % 12 AS season_peak_month,
+		       sqrt(sc * sc + ss * ss) / plays AS season_concentration,
+		       years AS season_years
+		FROM (
+			SELECT track_uri, count(*) AS plays, count(DISTINCT year(started_local)) AS years,
+			       sum(cos(2 * pi() * (month(started_local) - 1) / 12.0)) AS sc,
+			       sum(sin(2 * pi() * (month(started_local) - 1) / 12.0)) AS ss
+			FROM base GROUP BY track_uri
+		) WHERE plays > 0
+	),
+	binge AS (
+		SELECT track_uri, count(*) AS binge_days
+		FROM (
+			SELECT track_uri, CAST(started_local AS DATE) AS d
+			FROM base GROUP BY track_uri, d HAVING count(*) >= 3
+		) GROUP BY track_uri
+	),
+	ranked AS (
+		SELECT track_uri, started_local,
+		       ROW_NUMBER() OVER (PARTITION BY track_uri ORDER BY started_local) AS rn
+		FROM base
+	),
+	mtier AS (
+		SELECT track_uri, list_max(list_filter([1000, 500, 250, 100, 50, 25, 10], x -> x <= plays)) AS n
+		FROM (SELECT track_uri, count(*) AS plays FROM base GROUP BY track_uri)
+	),
+	milestone AS (
+		SELECT m.track_uri, m.n AS milestone_n,
+		       strftime(CAST(r.started_local AS DATE), '%Y-%m-%d') AS milestone_date
+		FROM mtier m JOIN ranked r ON r.track_uri = m.track_uri AND r.rn = m.n
+		WHERE m.n IS NOT NULL
+	),
+	comeback AS (
+		SELECT track_uri,
+		       strftime(ts, '%Y-%m-%d') AS comeback_date,
+		       gap_days AS comeback_gap_days, plays_30d AS comeback_plays_30d
+		FROM (
+			SELECT track_uri, ts,
+			       date_diff('day', LAG(ts) OVER (PARTITION BY track_uri ORDER BY ts), ts) AS gap_days,
+			       count(*) OVER (
+			           PARTITION BY track_uri ORDER BY ts
+			           RANGE BETWEEN CURRENT ROW AND INTERVAL '30 days' FOLLOWING
+			       ) AS plays_30d
+			FROM base
+		)
+		WHERE gap_days >= 180 AND plays_30d >= 5
+		QUALIFY ROW_NUMBER() OVER (PARTITION BY track_uri ORDER BY gap_days DESC, plays_30d DESC) = 1
+	)
+	SELECT head.*,
+	       monthly.monthly, hourly.hourly, weekly.weekly, platforms.platforms,
+	       rstart.reason_start, rend.reason_end, ctry.countries,
+	       comp.completion, compy.completion_yearly,
+	       shuffle.shuffle_ratio, shuffle.skip_shuffle, shuffle.skip_intentional,
+	       season.season_peak_month, season.season_concentration, season.season_years,
+	       binge.binge_days,
+	       milestone.milestone_n, milestone.milestone_date,
+	       comeback.comeback_date, comeback.comeback_gap_days, comeback.comeback_plays_30d
+	FROM head
+	LEFT JOIN monthly USING (track_uri)
+	LEFT JOIN hourly USING (track_uri)
+	LEFT JOIN weekly USING (track_uri)
+	LEFT JOIN platforms USING (track_uri)
+	LEFT JOIN rstart USING (track_uri)
+	LEFT JOIN rend USING (track_uri)
+	LEFT JOIN ctry USING (track_uri)
+	LEFT JOIN comp USING (track_uri)
+	LEFT JOIN compy USING (track_uri)
+	LEFT JOIN shuffle USING (track_uri)
+	LEFT JOIN season USING (track_uri)
+	LEFT JOIN binge USING (track_uri)
+	LEFT JOIN milestone USING (track_uri)
+	LEFT JOIN comeback USING (track_uri)`;
+}
+
+// The flat row the mega-statement returns: head columns + JSON-string list panels
+// + scalar/single-value panels spread into named columns.
+type DetailRow = HeadAgg & {
+	monthly: string | null;
+	hourly: string | null;
+	weekly: string | null;
+	platforms: string | null;
+	reason_start: string | null;
+	reason_end: string | null;
+	countries: string | null;
+	completion: string | null;
+	completion_yearly: string | null;
+	shuffle_ratio: number | null;
+	skip_shuffle: number | null;
+	skip_intentional: number | null;
+	season_peak_month: number | null;
+	season_concentration: number | null;
+	season_years: number | null;
+	binge_days: number | null;
+	milestone_n: number | null;
+	milestone_date: string | null;
+	comeback_date: string | null;
+	comeback_gap_days: number | null;
+	comeback_plays_30d: number | null;
+};
+
+function parseList<T>(s: string | null): T[] {
+	return s ? (JSON.parse(s) as T[]) : [];
+}
+
+// Full track detail (cards + every panel) for a batch of tracks. The per-track
+// panels come back from one mega-statement (`detailSql`); segue/origin/loop/
+// rank-by-year are read from the session-memoized global maps. So warming a
+// screenful of links is a single round-trip over one filtered scan, not N opens.
+// URIs absent from `listens` are simply missing from the result.
+export async function trackDetails(uris: string[]): Promise<TrackDetail[]> {
 	if (uris.length === 0) return [];
 	const placeholders = uris.map(() => "?").join(",");
-	const [rows, skip_ratio_all, rankMap] = await Promise.all([
-		query<HeadAgg>(
-			`SELECT ${HEAD_AGG} FROM listens
-			 WHERE track_uri IN (${placeholders}) GROUP BY track_uri`,
-			uris,
-		),
-		librarySkipRate(),
-		trackRankMap(),
-	]);
-	return rows.map((r) =>
-		toHead(r, skip_ratio_all, rankMap.get(r.track_uri) ?? 0),
-	);
-}
 
-export async function trackDeep(uri: string): Promise<TrackDeep> {
-	// Prefilter this track's rows into a tiny temp table once, then aggregate
-	// against it. The per-track stats below used to re-scan the whole listens
-	// table a dozen times per open; now that's one indexed scan to build `trk`
-	// plus a handful of scans over a few-hundred-row table. The library-wide
-	// passes that genuinely need the full log (segue, loop, origin, rankYearly)
-	// stay on listens. uri is a Spotify URI, escaped here because a parameter
-	// inside CREATE TABLE AS isn't reliably bound by the prepared-statement path.
-	const trk = `trk_${trkSeq++}`;
-	const lit = `'${uri.replaceAll("'", "''")}'`;
-	await query(
-		`CREATE TEMP TABLE ${trk} AS SELECT * FROM listens WHERE track_uri = ${lit}`,
-	);
-	try {
-		// milestone needs the play count up front to pick its tier; one cheap
-		// count off the prefiltered temp table, then the rest run in parallel so
-		// the heavier global-window passes (segue, loop, rank-by-year) overlap.
-		const plays = one(
-			await query<{ plays: number }>(`SELECT count(*) AS plays FROM ${trk}`),
-		).plays;
-
-		const [
-			monthlyRows,
-			hourly,
-			weekly,
-			platforms,
-			reason_start,
-			reason_end,
-			completionRows,
-			completion_yearly,
-			countries,
-			rank_yearly,
-			shuffle,
-			neighbors,
-			originRow,
-			loop,
-			binge_days,
-			season,
-			milestoneRow,
-			comeback,
-		] = await Promise.all([
-			monthly("track_uri = ?", uri),
-			query<Bucket>(
-				`
-				SELECT hour(started_local) AS bucket, count(*) AS plays,
-				       sum(ms_played) / 3600000.0 AS hours
-				FROM ${trk}
-				GROUP BY 1 ORDER BY 1`,
-			),
-			query<Bucket>(
-				`
-				SELECT isodow(started_local) AS bucket, count(*) AS plays,
-				       sum(ms_played) / 3600000.0 AS hours
-				FROM ${trk}
-				GROUP BY 1 ORDER BY 1`,
-			),
-			query<LabelCount>(
-				`
-				SELECT platform AS label, count(*) AS plays
-				FROM ${trk}
-				GROUP BY platform ORDER BY count(*) DESC`,
-			),
-			query<LabelCount>(
-				`
-				SELECT COALESCE(reason_start, '?') AS label, count(*) AS plays
-				FROM ${trk}
-				GROUP BY reason_start ORDER BY count(*) DESC`,
-			),
-			query<LabelCount>(
-				`
-				SELECT COALESCE(reason_end, '?') AS label, count(*) AS plays
-				FROM ${trk}
-				GROUP BY reason_end ORDER BY count(*) DESC`,
-			),
-			completion(uri),
-			completionYearly(uri),
-			query<LabelCount>(
-				`
-				SELECT COALESCE(conn_country, '?') AS label, count(*) AS plays
-				FROM ${trk}
-				GROUP BY conn_country ORDER BY count(*) DESC`,
-			),
-			rankYearly(uri),
-			query<{
-				shuffle_ratio: number | null;
-				skip_shuffle: number | null;
-				skip_intentional: number | null;
-			}>(
-				`
-				SELECT avg(CASE WHEN shuffle THEN 1.0 ELSE 0.0 END) AS shuffle_ratio,
-				       avg(CASE WHEN was_skipped THEN 1.0 ELSE 0.0 END)
-				           FILTER (WHERE shuffle) AS skip_shuffle,
-				       avg(CASE WHEN was_skipped THEN 1.0 ELSE 0.0 END)
-				           FILTER (WHERE NOT COALESCE(shuffle, false)) AS skip_intentional
-				FROM ${trk}`,
-			),
-			segue(uri),
-			origin(uri),
-			trackLoop(uri),
-			bingeDays(uri),
-			trackSeason(uri),
-			milestone(uri, plays),
-			trackComeback(uri),
+	const [rows, skip_ratio_all, rankMap, segueM, originM, loopM, rankYearlyM] =
+		await Promise.all([
+			query<DetailRow>(detailSql(placeholders), uris),
+			librarySkipRate(),
+			trackRankMap(),
+			segueMap(),
+			originMap(),
+			loopMap(),
+			rankYearlyMap(),
 		]);
 
+	return rows.map((r) => {
+		const uri = r.track_uri;
+		const seg = segueM.get(uri);
 		return {
-			monthly: monthlyRows,
-			hourly,
-			weekly,
-			platforms,
-			reason_start,
-			reason_end,
-			completion: completionRows,
-			completion_yearly,
-			countries,
-			rank_yearly,
-			shuffle_ratio: shuffle[0]?.shuffle_ratio ?? 0,
-			skip_shuffle: shuffle[0]?.skip_shuffle ?? null,
-			skip_intentional: shuffle[0]?.skip_intentional ?? null,
-			neighbors_before: neighbors.before,
-			neighbors_after: neighbors.after,
-			origin: originRow,
-			loop,
-			binge_days,
-			season,
-			milestone: milestoneRow,
-			comeback,
+			...toHead(r, skip_ratio_all, rankMap.get(uri) ?? 0),
+			monthly: parseList<MonthCount>(r.monthly),
+			hourly: parseList<Bucket>(r.hourly),
+			weekly: parseList<Bucket>(r.weekly),
+			platforms: parseList<LabelCount>(r.platforms),
+			reason_start: parseList<LabelCount>(r.reason_start),
+			reason_end: parseList<LabelCount>(r.reason_end),
+			completion: orderCompletion(parseList<LabelCount>(r.completion)),
+			completion_yearly: parseList<CompletionYear>(r.completion_yearly),
+			countries: parseList<LabelCount>(r.countries),
+			rank_yearly: rankYearlyM.get(uri) ?? [],
+			shuffle_ratio: r.shuffle_ratio ?? 0,
+			skip_shuffle: r.skip_shuffle ?? null,
+			skip_intentional: r.skip_intentional ?? null,
+			neighbors_before: seg?.before ?? [],
+			neighbors_after: seg?.after ?? [],
+			origin: originM.get(uri) ?? null,
+			loop: loopM.get(uri) ?? null,
+			binge_days: r.binge_days ?? 0,
+			season:
+				r.season_peak_month == null
+					? null
+					: {
+							peak_month: r.season_peak_month,
+							concentration: r.season_concentration ?? 0,
+							years: r.season_years ?? 0,
+						},
+			milestone:
+				r.milestone_n != null && r.milestone_date
+					? { n: r.milestone_n, date: r.milestone_date }
+					: null,
+			comeback: r.comeback_date
+				? {
+						date: r.comeback_date,
+						gap_days: r.comeback_gap_days ?? 0,
+						plays_30d: r.comeback_plays_30d ?? 0,
+					}
+				: null,
 		};
-	} finally {
-		await query(`DROP TABLE IF EXISTS ${trk}`).catch(() => {});
-	}
+	});
+}
+
+// Single track detail — the cold-navigation path. Just the batch of one; the
+// hoisted maps it reads are shared with any bulk warm already in flight.
+export async function trackDetail(uri: string): Promise<TrackDetail> {
+	const [detail] = await trackDetails([uri]);
+	if (!detail) throw new Error("not found");
+	return detail;
 }
 
 export async function artist(name: string): Promise<ArtistDetail> {

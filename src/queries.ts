@@ -18,18 +18,13 @@ export const q = {
 	allTracks: () =>
 		queryOptions({ queryKey: ["allTracks"] as const, queryFn: api.allTracks }),
 
-	// Track detail is split so list pages can preload cheaply: `trackHead` is the
-	// batchable card data (warmed in bulk via api.trackHeads), `trackDeep` is the
-	// heavy panels loaded only when the detail page mounts.
-	trackHead: (uri: string) =>
+	// Track detail (cards + panels) in one cache entry. List pages pre-warm the
+	// on-screen rows in bulk via api.trackDetails (one batched pass); a cold
+	// direct open falls back to the single-track fetch.
+	trackDetail: (uri: string) =>
 		queryOptions({
-			queryKey: ["track", "head", uri] as const,
-			queryFn: () => api.trackHead(uri),
-		}),
-	trackDeep: (uri: string) =>
-		queryOptions({
-			queryKey: ["track", "deep", uri] as const,
-			queryFn: () => api.trackDeep(uri),
+			queryKey: ["track", "detail", uri] as const,
+			queryFn: () => api.trackDetail(uri),
 		}),
 	artist: (name: string) =>
 		queryOptions({

@@ -18,3 +18,4 @@ export { Muted } from "./Text";
 export { ToggleGroup } from "./ToggleGroup";
 export type { Align, Column, Gap, Sort, VColumn } from "./types";
 export { VirtualTable } from "./VirtualTable";
+export { WhenVisible } from "./WhenVisible";

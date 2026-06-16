@@ -28,6 +28,7 @@ import {
 	Skeleton,
 	Stack,
 	Status,
+	WhenVisible,
 } from "../ui";
 import {
 	Breakdown,
@@ -40,20 +41,19 @@ import {
 	WeekBars,
 	YearLineChart,
 } from "../widgets";
+import * as css from "./TrackDetail.css";
 
 const route = getRouteApi("/track/$uri");
 
 export default function TrackDetail() {
 	const t = useT();
 	const { uri } = route.useParams();
-	// Head paints the title + cards instantly (warmed on preload); deep carries
-	// the heavy panels and loads on mount, streaming in below the cards.
-	const { data: head, error } = useQuery(q.trackHead(uri));
-	const { data: deep } = useQuery(q.trackDeep(uri));
+	// Cards and panels come from one batched query. An on-screen list warms this
+	// before the click, so navigation is instant; a cold/direct open resolves it
+	// here behind the full skeleton.
+	const { data: detail, error } = useQuery(q.trackDetail(uri));
 	if (error) return <Status error={error} />;
-	// The route loader warms head, so this rarely shows — but on a cold/direct
-	// load fall back to the full skeleton rather than a bare "Loading…" line.
-	if (!head)
+	if (!detail)
 		return (
 			<>
 				<DetailHead
@@ -65,6 +65,8 @@ export default function TrackDetail() {
 				<TrackPanelsSkeleton />
 			</>
 		);
+	// detail is TrackHead & TrackDeep — both halves of the page read from it.
+	const head = detail;
 
 	// Skip rate next to the library baseline — a raw percentage means little
 	// without it (§D).
@@ -117,12 +119,12 @@ export default function TrackDetail() {
 
 			<SpotifyEmbed uri={uri} />
 
-			{deep ? <TrackPanels head={head} deep={deep} /> : <TrackPanelsSkeleton />}
+			<TrackPanels head={detail} deep={detail} />
 		</>
 	);
 }
 
-// Placeholder for the deep panels while `trackDeep` resolves. Mirrors only the
+// Placeholder for the panels while the detail query resolves. Mirrors only the
 // always-present sections (the extras row, monthly chart, hour/weekday charts
 // and the four breakdowns) at their real heights, so the page holds its shape
 // and the real panels swap in without a jump. Conditional panels (origin,
@@ -159,9 +161,8 @@ function TrackPanelsSkeleton() {
 	);
 }
 
-// The below-the-fold panels — split out so they render only once `trackDeep`
-// resolves, keeping the cards above instant on navigation. Derived "goodies"
-// (§E–§K) live here because each draws on a deep field.
+// The below-the-fold panels. Derived "goodies" (§E–§K) live here because each
+// draws on a deep field.
 function TrackPanels({ head, deep }: { head: TrackHead; deep: TrackDeep }) {
 	const t = useT();
 
@@ -245,12 +246,14 @@ function TrackPanels({ head, deep }: { head: TrackHead; deep: TrackDeep }) {
 			<Cards items={extras} />
 
 			{showSkipSplit && (
-				<Muted>
-					{t("track.skipSplit", {
-						shuffle: fmtPct(deep.skip_shuffle ?? 0),
-						intent: fmtPct(deep.skip_intentional ?? 0),
-					})}
-				</Muted>
+				<p className={css.skipSplit}>
+					<Muted>
+						{t("track.skipSplit", {
+							shuffle: fmtPct(deep.skip_shuffle ?? 0),
+							intent: fmtPct(deep.skip_intentional ?? 0),
+						})}
+					</Muted>
+				</p>
 			)}
 
 			{deep.origin && (
@@ -300,39 +303,49 @@ function TrackPanels({ head, deep }: { head: TrackHead; deep: TrackDeep }) {
 			)}
 
 			<Panel title={t("track.playsPerMonth")}>
-				<MonthlyChart data={deep.monthly} metric="plays" />
+				<WhenVisible fallback={<ChartSkeleton height={240} />}>
+					<MonthlyChart data={deep.monthly} metric="plays" />
+				</WhenVisible>
 			</Panel>
 
 			<Grid2>
 				<Panel title={t("track.whenYouPlay")}>
-					<HourBars data={deep.hourly} />
+					<WhenVisible fallback={<ChartSkeleton height={200} />}>
+						<HourBars data={deep.hourly} />
+					</WhenVisible>
 				</Panel>
 				<Panel title={t("track.byWeekday")}>
-					<WeekBars data={deep.weekly} />
+					<WhenVisible fallback={<ChartSkeleton height={200} />}>
+						<WeekBars data={deep.weekly} />
+					</WhenVisible>
 				</Panel>
 			</Grid2>
 
 			{deep.completion_yearly.length >= 2 && (
 				<Panel title={t("track.completionTrend")}>
-					<YearLineChart
-						percent
-						data={deep.completion_yearly.map((c) => ({
-							year: c.year,
-							value: c.avg_completion,
-						}))}
-					/>
+					<WhenVisible fallback={<ChartSkeleton height={200} />}>
+						<YearLineChart
+							percent
+							data={deep.completion_yearly.map((c) => ({
+								year: c.year,
+								value: c.avg_completion,
+							}))}
+						/>
+					</WhenVisible>
 				</Panel>
 			)}
 
 			{deep.rank_yearly.length >= 2 && (
 				<Panel title={t("track.rankByYear")}>
-					<YearLineChart
-						reversed
-						data={deep.rank_yearly.map((r) => ({
-							year: r.year,
-							value: r.rank,
-						}))}
-					/>
+					<WhenVisible fallback={<ChartSkeleton height={200} />}>
+						<YearLineChart
+							reversed
+							data={deep.rank_yearly.map((r) => ({
+								year: r.year,
+								value: r.rank,
+							}))}
+						/>
+					</WhenVisible>
 				</Panel>
 			)}
 

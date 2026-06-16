@@ -1,4 +1,8 @@
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+	type QueryClient,
+	useQuery,
+	useQueryClient,
+} from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { useEffect, useRef } from "react";
 import { api } from "./api";
@@ -8,42 +12,63 @@ import { q } from "./queries";
 import { useSetting } from "./settings";
 import { Muted } from "./ui";
 
-// Batch-warm the head (card) data for a list of track links in a single query,
-// so a table of N track rows costs one round-trip instead of N full track opens
-// against the single DuckDB worker. Only URIs not already cached are fetched,
-// and the request is debounced so re-renders (sort, filter, search keystrokes)
-// don't refire. Capped because the head aggregate is one IN-scan: huge lists
-// (the ~20k-row virtualized Library) would build an unwieldy IN clause, so they
-// stay on per-row dwell prefetch instead of calling this.
-const PREFETCH_HEADS_CAP = 1000;
-const PREFETCH_HEADS_DELAY = 200;
-export function usePrefetchTrackHeads(uris: string[]) {
+// --- Track-detail prewarming -------------------------------------------------
+// One shared, debounced batch queue. Every warm request — a list mounting, a row
+// dwelling into view, a hover — funnels its uris here instead of firing its own
+// query, so they coalesce into a single `api.trackDetails(...)` per window. That
+// is the whole point: without it, per-row dwell on a 100-row table raced the
+// bulk warm and flung ~100 single-track queries at the one DuckDB worker. The
+// queue dedupes against the cache and against in-flight uris, and chunks large
+// sets so the IN list and the materialized result stay bounded.
+const WARM_DEBOUNCE = 120;
+const WARM_CHUNK = 120;
+const warmPending = new Set<string>();
+const warmInflight = new Set<string>();
+let warmTimer: ReturnType<typeof setTimeout> | undefined;
+let warmClient: QueryClient | null = null;
+
+export function warmTrackDetails(qc: QueryClient, uris: Iterable<string>) {
+	warmClient = qc;
+	for (const u of uris) {
+		if (!u || warmPending.has(u) || warmInflight.has(u)) continue;
+		if (qc.getQueryData(q.trackDetail(u).queryKey) !== undefined) continue;
+		warmPending.add(u);
+	}
+	if (warmPending.size > 0 && warmTimer === undefined) {
+		warmTimer = setTimeout(flushWarm, WARM_DEBOUNCE);
+	}
+}
+
+function flushWarm() {
+	warmTimer = undefined;
+	const qc = warmClient;
+	if (!qc || warmPending.size === 0) return;
+	const batch = [...warmPending];
+	warmPending.clear();
+	for (let i = 0; i < batch.length; i += WARM_CHUNK) {
+		const chunk = batch.slice(i, i + WARM_CHUNK);
+		for (const u of chunk) warmInflight.add(u);
+		api
+			.trackDetails(chunk)
+			.then((details) => {
+				for (const d of details)
+					qc.setQueryData(q.trackDetail(d.track_uri).queryKey, d);
+			})
+			.catch(() => {})
+			.finally(() => {
+				for (const u of chunk) warmInflight.delete(u);
+			});
+	}
+}
+
+// Feed a list view's rendered rows into the shared warm queue. The per-row dwell
+// hook below feeds the same queue, so the two can't double-fetch a row.
+export function usePrefetchTrackDetails(uris: string[]) {
 	const qc = useQueryClient();
-	// Encode the list as a string so the effect only refires when the set of
-	// URIs actually changes, not on every render that produces a new array.
+	// Encode as a string so the effect only refires when the set actually changes.
 	const key = uris.join("\n");
 	useEffect(() => {
-		const list = key ? key.split("\n") : [];
-		if (list.length === 0 || list.length > PREFETCH_HEADS_CAP) return;
-		const missing = list.filter(
-			(u) => u && qc.getQueryData(q.trackHead(u).queryKey) === undefined,
-		);
-		if (missing.length === 0) return;
-		let cancelled = false;
-		const timer = setTimeout(() => {
-			api
-				.trackHeads(missing)
-				.then((heads) => {
-					if (cancelled) return;
-					for (const h of heads)
-						qc.setQueryData(q.trackHead(h.track_uri).queryKey, h);
-				})
-				.catch(() => {});
-		}, PREFETCH_HEADS_DELAY);
-		return () => {
-			cancelled = true;
-			clearTimeout(timer);
-		};
+		if (key) warmTrackDetails(qc, key.split("\n"));
 	}, [key, qc]);
 }
 
@@ -90,19 +115,22 @@ function useDwellPrefetch<T extends HTMLElement>(run: () => void) {
 }
 
 // Clickable track / artist names. Used in every table and list so any name
-// becomes a jump to its detail page. Hover still preloads via the router's
-// default "intent"; the dwell hook adds an in-view warm-up on top.
+// becomes a jump to its detail page. Track links warm through the shared batch
+// queue when they dwell in view; `preload={false}` disables the router's per-row
+// "intent" preload, which would otherwise fire a single-track query per hover and
+// bypass the batch.
 
 export function TrackLink({ uri, name }: { uri: string; name: string }) {
 	const qc = useQueryClient();
 	const ref = useDwellPrefetch<HTMLAnchorElement>(() => {
-		qc.prefetchQuery(q.trackHead(uri));
+		warmTrackDetails(qc, [uri]);
 	});
 	return (
 		<Link
 			ref={ref}
 			to="/track/$uri"
 			params={{ uri }}
+			preload={false}
 			className={css.entity}
 			title={name}
 		>
