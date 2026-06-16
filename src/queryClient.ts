@@ -7,9 +7,11 @@ export const queryClient = new QueryClient({
 		queries: {
 			// History is write-once; nothing changes under us mid-session.
 			staleTime: Number.POSITIVE_INFINITY,
-			// Keep warmed queries resident for the whole session so revisiting a
-			// page (or restoring a scrolled list) never refetches.
-			gcTime: Number.POSITIVE_INFINITY,
+			// Evict results 10 min after their last observer unmounts so the JS heap
+			// doesn't grow unbounded as you browse (every Arrow→JS result would
+			// otherwise stay resident all session). A revisit past that window
+			// re-runs the SQL, which is cheap against the in-memory DuckDB.
+			gcTime: 10 * 60 * 1000,
 			retry: 1,
 		},
 	},

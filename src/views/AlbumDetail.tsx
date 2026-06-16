@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { getRouteApi } from "@tanstack/react-router";
 import { useMemo } from "react";
 import type { TrackRow } from "../api";
+import { HourBars, MonthlyChart, WeekBars } from "../charts";
 import { fmtDate, fmtHours, fmtInt, fmtMonth, fmtPct } from "../format";
 import { type TFunction, useT } from "../i18n";
 import {
@@ -22,13 +23,7 @@ import {
 	SubLine,
 	WhenVisible,
 } from "../ui";
-import {
-	Cards,
-	ChartSkeleton,
-	HourBars,
-	MonthlyChart,
-	WeekBars,
-} from "../widgets";
+import { Cards, ChartSkeleton } from "../widgets";
 
 const trackColumns = (t: TFunction): Column<TrackRow>[] => [
 	{

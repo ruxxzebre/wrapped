@@ -1,19 +1,18 @@
 import { useQuery } from "@tanstack/react-query";
-import {
-	Bar,
-	BarChart,
-	CartesianGrid,
-	ResponsiveContainer,
-	Tooltip,
-	XAxis,
-	YAxis,
-} from "recharts";
+import { lazy, Suspense } from "react";
 import OnThisDay from "../components/OnThisDay";
 import { fmtDate, fmtHours, fmtInt } from "../format";
 import { useT } from "../i18n";
 import { q } from "../queries";
 import { chartColors, Panel, Status } from "../ui";
 import { Cards, CardsSkeleton, ChartSkeleton } from "../widgets";
+
+// recharts is heavy and the home view is eager, so the year charts (below the
+// fold) load on demand: the chunk only downloads when data lands, and the same
+// ChartSkeleton panel covers both the data-loading and chunk-loading waits.
+const YearChart = lazy(() =>
+	import("../charts").then((m) => ({ default: m.YearChart })),
+);
 
 // Matches the ResponsiveContainer height in YearChart so the skeleton panel and
 // the real panel are the same size — no reflow when data lands.
@@ -65,60 +64,37 @@ export default function Summary() {
 			<OnThisDay />
 
 			{data ? (
-				<YearChart
-					title={t("summary.hoursPerYear")}
-					data={data.years}
-					dataKey="hours"
-					color={chartColors.accent}
-				/>
+				<Suspense fallback={yearChartSkeleton(t("summary.hoursPerYear"))}>
+					<YearChart
+						title={t("summary.hoursPerYear")}
+						data={data.years}
+						dataKey="hours"
+						color={chartColors.accent}
+					/>
+				</Suspense>
 			) : (
-				<Panel title={t("summary.hoursPerYear")}>
-					<ChartSkeleton height={YEAR_CHART_HEIGHT} />
-				</Panel>
+				yearChartSkeleton(t("summary.hoursPerYear"))
 			)}
 			{data ? (
-				<YearChart
-					title={t("summary.playsPerYear")}
-					data={data.years}
-					dataKey="plays"
-					color={chartColors.info}
-				/>
+				<Suspense fallback={yearChartSkeleton(t("summary.playsPerYear"))}>
+					<YearChart
+						title={t("summary.playsPerYear")}
+						data={data.years}
+						dataKey="plays"
+						color={chartColors.info}
+					/>
+				</Suspense>
 			) : (
-				<Panel title={t("summary.playsPerYear")}>
-					<ChartSkeleton height={YEAR_CHART_HEIGHT} />
-				</Panel>
+				yearChartSkeleton(t("summary.playsPerYear"))
 			)}
 		</>
 	);
 }
 
-function YearChart({
-	title,
-	data,
-	dataKey,
-	color,
-}: {
-	title: string;
-	data: unknown[];
-	dataKey: string;
-	color: string;
-}) {
+function yearChartSkeleton(title: string) {
 	return (
 		<Panel title={title}>
-			<ResponsiveContainer width="100%" height={280}>
-				<BarChart data={data}>
-					<CartesianGrid strokeDasharray="3 3" stroke={chartColors.grid} />
-					<XAxis dataKey="year" stroke={chartColors.axis} />
-					<YAxis stroke={chartColors.axis} />
-					<Tooltip {...chartColors.tooltip} />
-					<Bar
-						dataKey={dataKey}
-						fill={color}
-						radius={[3, 3, 0, 0]}
-						isAnimationActive={false}
-					/>
-				</BarChart>
-			</ResponsiveContainer>
+			<ChartSkeleton height={YEAR_CHART_HEIGHT} />
 		</Panel>
 	);
 }

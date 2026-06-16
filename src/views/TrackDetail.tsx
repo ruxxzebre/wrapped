@@ -2,6 +2,13 @@ import { useQuery } from "@tanstack/react-query";
 import { getRouteApi } from "@tanstack/react-router";
 import type { Neighbor, TrackDeep, TrackHead } from "../api";
 import {
+	Donut,
+	HourBars,
+	MonthlyChart,
+	WeekBars,
+	YearLineChart,
+} from "../charts";
+import {
 	fmtDate,
 	fmtDuration,
 	fmtHours,
@@ -36,11 +43,6 @@ import {
 	Cards,
 	CardsSkeleton,
 	ChartSkeleton,
-	Donut,
-	HourBars,
-	MonthlyChart,
-	WeekBars,
-	YearLineChart,
 } from "../widgets";
 import * as css from "./TrackDetail.css";
 
