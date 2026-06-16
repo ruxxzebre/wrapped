@@ -11,6 +11,7 @@ import {
 } from "../format";
 import { fillNodes, tEnum, useT } from "../i18n";
 import {
+	AlbumLink,
 	ArtistLink,
 	BackLink,
 	SpotifyEmbed,
@@ -109,7 +110,8 @@ export default function TrackDetail() {
 				title={head.name}
 				sub={
 					<>
-						<ArtistLink name={head.artist} /> · <Muted>{head.album}</Muted>
+						<ArtistLink name={head.artist} /> ·{" "}
+						<AlbumLink album={head.album} artist={head.artist} muted />
 					</>
 				}
 				action={<SpotifyLink uri={uri} />}

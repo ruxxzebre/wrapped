@@ -32,3 +32,9 @@ export function DetailHead({
 export function DetailTitle({ children }: { children: ReactNode }) {
 	return <h1 className={`${css.title}`}>{children}</h1>;
 }
+
+// One line within a stacked, multi-line subtitle. Without it, adjacent inline
+// Muted spans run together on a single line (album/artist headers stack several).
+export function SubLine({ children }: { children: ReactNode }) {
+	return <div className={css.subLine}>{children}</div>;
+}

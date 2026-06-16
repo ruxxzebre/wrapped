@@ -20,6 +20,13 @@ const ReactQueryDevtools = import.meta.env.DEV
 		)
 	: null;
 
+// Dev-only decision benchmark: `await window.__bench()` in the console once a
+// library is loaded. Lazy import keeps bench.ts out of the prod bundle.
+if (import.meta.env.DEV) {
+	(window as unknown as { __bench: () => Promise<void> }).__bench = () =>
+		import("./db/bench").then((m) => m.bench());
+}
+
 // Warm the DuckDB-WASM engine (worker + wasm instantiate + icu load) in the
 // background. This no longer gates the UI: ensureReady decides readiness from
 // the OPFS snapshot alone, so a first-time visitor reaches the upload screen

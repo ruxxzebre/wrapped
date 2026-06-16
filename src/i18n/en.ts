@@ -22,6 +22,7 @@ export const en = {
 	"nav./story": "Story",
 	"nav./top-tracks": "Top Tracks",
 	"nav./top-artists": "Top Artists",
+	"nav./top-albums": "Top Albums",
 	"nav./patterns": "Patterns",
 	"nav./calendar": "Calendar",
 	"nav./library": "Library",
@@ -351,6 +352,8 @@ export const en = {
 	"artist.topAlbums": "Top albums by hours",
 	"artist.allTracks": "All tracks",
 	"artist.allTracksCount": "All tracks ({count})",
+	"album.by": "by",
+	"album.byPlaysAlbums": "by plays, all albums",
 	"artist.whenYouPlay": "When you play them (hour of day)",
 	"artist.byWeekday": "When you play them (day of week)",
 	"artist.peak": "peak month",
@@ -383,9 +386,11 @@ export const en = {
 	"links.unknownArtist": "unknown artist",
 
 	// --- command palette ---------------------------------------------------
-	"palette.placeholder": "Search tracks and artists…",
+	"palette.placeholder": "Search tracks, artists, albums, pages…",
 	"palette.artist": "artist",
+	"palette.album": "album",
 	"palette.track": "track",
+	"palette.page": "page",
 	"palette.noMatches": "No matches",
 
 	// --- Story -------------------------------------------------------------

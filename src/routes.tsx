@@ -25,6 +25,7 @@ import Summary from "./views/Summary";
 const Story = lazyRouteComponent(() => import("./components/Story"));
 const TopTracks = lazyRouteComponent(() => import("./views/TopTracks"));
 const TopArtists = lazyRouteComponent(() => import("./views/TopArtists"));
+const TopAlbums = lazyRouteComponent(() => import("./views/TopAlbums"));
 const Library = lazyRouteComponent(() => import("./views/Library"));
 const Patterns = lazyRouteComponent(() => import("./views/Patterns"));
 const Calendar = lazyRouteComponent(() => import("./views/Calendar"));
@@ -46,6 +47,7 @@ const InsightsDevices = lazyRouteComponent(
 );
 const TrackDetail = lazyRouteComponent(() => import("./views/TrackDetail"));
 const ArtistDetail = lazyRouteComponent(() => import("./views/ArtistDetail"));
+const AlbumDetail = lazyRouteComponent(() => import("./views/AlbumDetail"));
 const YearReview = lazyRouteComponent(() => import("./views/YearReview"));
 
 // Code-based route tree over hash history. Hash URLs (#/track/...) need zero
@@ -143,6 +145,16 @@ const artistsRoute = createRoute({
 	loader: ({ context: { queryClient } }) =>
 		prefetch(queryClient, (qc) =>
 			qc.ensureQueryData(q.topArtists("plays", {}, 100)),
+		),
+});
+const albumsRoute = createRoute({
+	getParentRoute: () => rootRoute,
+	path: "/music/albums",
+	component: TopAlbums,
+	staticData: { titleKey: "nav./top-albums", tint: "neutral" },
+	loader: ({ context: { queryClient } }) =>
+		prefetch(queryClient, (qc) =>
+			qc.ensureQueryData(q.topAlbums("plays", {}, 100)),
 		),
 });
 const libraryRoute = createRoute({
@@ -327,6 +339,18 @@ const artistRoute = createRoute({
 			]),
 		),
 });
+const albumRoute = createRoute({
+	getParentRoute: () => rootRoute,
+	path: "/album/$artist/$album",
+	component: AlbumDetail,
+	loader: ({ context: { queryClient }, params: { artist, album } }) =>
+		prefetch(queryClient, (qc) =>
+			Promise.all([
+				qc.ensureQueryData(q.album(artist, album)),
+				qc.ensureQueryData(q.albumTracks(artist, album)),
+			]),
+		),
+});
 const yearRoute = createRoute({
 	getParentRoute: () => rootRoute,
 	path: "/year/$year",
@@ -354,6 +378,7 @@ const routeTree = rootRoute.addChildren([
 	storyRoute,
 	tracksRoute,
 	artistsRoute,
+	albumsRoute,
 	libraryRoute,
 	insightsRoute.addChildren([
 		insightsIndexRoute,
@@ -370,6 +395,7 @@ const routeTree = rootRoute.addChildren([
 	settingsRoute,
 	trackRoute,
 	artistRoute,
+	albumRoute,
 	yearRoute,
 	catchAllRoute,
 ]);

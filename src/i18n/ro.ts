@@ -16,6 +16,7 @@ export const ro: Translation = {
 	"nav./story": "Poveste",
 	"nav./top-tracks": "Top piese",
 	"nav./top-artists": "Top artiști",
+	"nav./top-albums": "Top albume",
 	"nav./patterns": "Tipare",
 	"nav./calendar": "Calendar",
 	"nav./library": "Bibliotecă",
@@ -351,6 +352,8 @@ export const ro: Translation = {
 	"artist.topAlbums": "Top albume după ore",
 	"artist.allTracks": "Toate piesele",
 	"artist.allTracksCount": "Toate piesele ({count})",
+	"album.by": "de",
+	"album.byPlaysAlbums": "după redări, toate albumele",
 	"artist.whenYouPlay": "Când îi asculți (ora din zi)",
 	"artist.byWeekday": "Când îi asculți (ziua săptămânii)",
 	"artist.peak": "luna de vârf",
@@ -383,9 +386,11 @@ export const ro: Translation = {
 	"links.unknownArtist": "artist necunoscut",
 
 	// --- command palette ---------------------------------------------------
-	"palette.placeholder": "Caută piese și artiști…",
+	"palette.placeholder": "Caută piese, artiști, albume, pagini…",
 	"palette.artist": "artist",
+	"palette.album": "album",
 	"palette.track": "piesă",
+	"palette.page": "pagină",
 	"palette.noMatches": "Nicio potrivire",
 
 	// --- Story -------------------------------------------------------------

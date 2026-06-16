@@ -3,7 +3,7 @@ import { useMemo, useState } from "react";
 import type { TrackRow } from "../api";
 import { fmtDate, fmtHours, fmtInt, fmtPct } from "../format";
 import { type TFunction, useT } from "../i18n";
-import { ArtistLink, TrackLink } from "../links";
+import { AlbumLink, ArtistLink, TrackLink } from "../links";
 import { q } from "../queries";
 import {
 	ControlsBar,
@@ -36,7 +36,7 @@ const columns = (t: TFunction): VColumn<TrackRow>[] => [
 		header: t("col.album"),
 		size: "minmax(140px,1.4fr)",
 		muted: true,
-		cell: (row) => row.album,
+		cell: (row) => <AlbumLink album={row.album} artist={row.artist} muted />,
 	},
 	{
 		key: "plays",

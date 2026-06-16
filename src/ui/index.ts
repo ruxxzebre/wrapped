@@ -2,7 +2,7 @@ export { Badge, Delta, type Tone } from "./Badge";
 export { Button } from "./Button";
 export { Card } from "./Card";
 export { DataTable } from "./DataTable";
-export { DetailHead, DetailTitle } from "./DetailHead";
+export { DetailHead, DetailTitle, SubLine } from "./DetailHead";
 export { ControlsBar, Field, Input, Select } from "./Field";
 export { CardGrid, Grid2 } from "./Grid";
 export { Modal } from "./Modal";

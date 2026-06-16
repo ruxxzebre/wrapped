@@ -27,6 +27,7 @@ export const NAV = [
 		leaves: [
 			{ titleKey: "nav./top-tracks", slug: "/music/tracks" },
 			{ titleKey: "nav./top-artists", slug: "/music/artists" },
+			{ titleKey: "nav./top-albums", slug: "/music/albums" },
 			{ titleKey: "nav./library", slug: "/music/library" },
 		],
 	},

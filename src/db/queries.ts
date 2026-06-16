@@ -1,4 +1,5 @@
 import type {
+	AlbumDetail,
 	ArtistDetail,
 	AttentionYear,
 	Bucket,
@@ -35,6 +36,7 @@ import type {
 	StoryOrigin,
 	StoryPersona,
 	Summary,
+	TopAlbum,
 	TopArtist,
 	TopTrack,
 	TrackDetail,
@@ -460,6 +462,38 @@ export async function topArtists(
 		FROM listens
 		WHERE ${conds.join(" AND ")}
 		GROUP BY artist_name
+		ORDER BY ${METRICS[metric]} DESC
+		LIMIT ?`,
+		args,
+	);
+}
+
+// Albums are grouped by (artist, album) since the export has no album id. Blank
+// album names are excluded so the list isn't headed by a giant "?" bucket.
+export async function topAlbums(
+	metric: Metric,
+	p: Period,
+	minMs: number,
+	limit: number,
+): Promise<TopAlbum[]> {
+	const conds = [
+		"ms_played >= ?",
+		"album_name IS NOT NULL",
+		"album_name <> ''",
+	];
+	const args: unknown[] = [minMs];
+	periodWhere(p, conds, args);
+	args.push(limit);
+	return query<TopAlbum>(
+		`
+		SELECT album_name                 AS album,
+		       COALESCE(artist_name, '?')  AS artist,
+		       count(*)                   AS plays,
+		       sum(ms_played) / 3600000.0 AS hours,
+		       count(DISTINCT track_uri)  AS tracks
+		FROM listens
+		WHERE ${conds.join(" AND ")}
+		GROUP BY album_name, artist_name
 		ORDER BY ${METRICS[metric]} DESC
 		LIMIT ?`,
 		args,
@@ -1189,6 +1223,109 @@ export async function artistTracks(name: string): Promise<TrackRow[]> {
 		[name],
 	);
 	return rows.map((r) => ({ ...r, artist: name }));
+}
+
+// Album detail — keyed by (artist, album) since the export carries no album id.
+// Mirrors the artist detail shape: head stats, library skip baseline, monthly
+// timeline and the time-of-day / day-of-week histograms.
+export async function album(
+	artist: string,
+	name: string,
+): Promise<AlbumDetail> {
+	const where = "artist_name = ? AND album_name = ?";
+	const key = [artist, name];
+
+	const head = one(
+		await query<{
+			plays: number;
+			hours: number | null;
+			tracks: number;
+			skip_ratio: number | null;
+			first_play: string | null;
+			last_play: string | null;
+		}>(
+			`
+			SELECT count(*)                   AS plays,
+			       sum(ms_played) / 3600000.0 AS hours,
+			       count(DISTINCT track_uri)  AS tracks,
+			       avg(CASE WHEN was_skipped THEN 1.0 ELSE 0.0 END) AS skip_ratio,
+			       min(ts) AS first_play, max(ts) AS last_play
+			FROM listens WHERE ${where}`,
+			key,
+		),
+	);
+	if (head.plays === 0) throw new Error("not found");
+
+	// Rank among all albums by play count.
+	const rank = await query<{ rnk: number }>(
+		`
+		SELECT rnk FROM (
+			SELECT artist_name, album_name, RANK() OVER (ORDER BY count(*) DESC) AS rnk
+			FROM listens WHERE album_name IS NOT NULL AND album_name <> ''
+			GROUP BY artist_name, album_name
+		) WHERE artist_name = ? AND album_name = ?`,
+		key,
+	);
+
+	const skipAll = await query<{ s: number | null }>(
+		`SELECT avg(CASE WHEN was_skipped THEN 1.0 ELSE 0.0 END) AS s FROM listens`,
+	);
+
+	const albumBuckets = (expr: string) =>
+		query<Bucket>(
+			`SELECT ${expr} AS bucket, count(*) AS plays,
+			        sum(ms_played) / 3600000.0 AS hours
+			 FROM listens WHERE ${where}
+			 GROUP BY bucket ORDER BY bucket`,
+			key,
+		);
+
+	const months = await query<MonthCount>(
+		`
+		SELECT strftime(date_trunc('month', started_local), '%Y-%m') AS month,
+		       count(*) AS plays, sum(ms_played) / 3600000.0 AS hours
+		FROM listens WHERE ${where}
+		GROUP BY month ORDER BY month`,
+		key,
+	);
+
+	return {
+		album: name,
+		artist,
+		plays: head.plays,
+		hours: head.hours ?? 0,
+		tracks: head.tracks,
+		skip_ratio: head.skip_ratio ?? 0,
+		skip_ratio_all: skipAll[0]?.s ?? 0,
+		first_play: head.first_play ?? "",
+		last_play: head.last_play ?? "",
+		rank_plays: rank[0]?.rnk ?? 0,
+		monthly: months,
+		hourly: await albumBuckets("hour(started_local)"),
+		weekly: await albumBuckets("isodow(started_local)"),
+	};
+}
+
+// Every track on an album, strongest affinity first. Links back to track detail.
+export async function albumTracks(
+	artist: string,
+	name: string,
+): Promise<TrackRow[]> {
+	const rows = await query<Omit<TrackRow, "artist">>(
+		`
+		SELECT track_uri,
+		       COALESCE(max(track_name), '?') AS name,
+		       COALESCE(max(album_name), '?') AS album,
+		       count(*)                       AS plays,
+		       sum(ms_played) / 3600000.0     AS hours,
+		       min(ts)                        AS first_play,
+		       max(ts)                        AS last_play,
+		       avg(CASE WHEN was_skipped THEN 1.0 ELSE 0.0 END) AS skip_ratio
+		FROM listens WHERE artist_name = ? AND album_name = ?
+		GROUP BY track_uri ORDER BY plays DESC`,
+		[artist, name],
+	);
+	return rows.map((r) => ({ ...r, artist }));
 }
 
 // --- calendar.go --------------------------------------------------------------

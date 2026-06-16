@@ -36,6 +36,16 @@ export const q = {
 			queryKey: ["artistTracks", name] as const,
 			queryFn: () => api.artistTracks(name),
 		}),
+	album: (artist: string, name: string) =>
+		queryOptions({
+			queryKey: ["album", artist, name] as const,
+			queryFn: () => api.album(artist, name),
+		}),
+	albumTracks: (artist: string, name: string) =>
+		queryOptions({
+			queryKey: ["albumTracks", artist, name] as const,
+			queryFn: () => api.albumTracks(artist, name),
+		}),
 
 	calendar: (year?: number) =>
 		queryOptions({
@@ -54,6 +64,11 @@ export const q = {
 		queryOptions({
 			queryKey: ["topArtists", metric, period, limit] as const,
 			queryFn: () => api.topArtists(metric, period, 30000, limit),
+		}),
+	topAlbums: (metric: Metric, period: Period, limit: number) =>
+		queryOptions({
+			queryKey: ["topAlbums", metric, period, limit] as const,
+			queryFn: () => api.topAlbums(metric, period, 30000, limit),
 		}),
 	topTracks: (metric: Metric, period: Period, minMs: number, limit: number) =>
 		queryOptions({

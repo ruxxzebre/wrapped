@@ -16,6 +16,7 @@ export const ru: Translation = {
 	"nav./story": "История",
 	"nav./top-tracks": "Топ треков",
 	"nav./top-artists": "Топ исполнителей",
+	"nav./top-albums": "Топ альбомов",
 	"nav./patterns": "Паттерны",
 	"nav./calendar": "Календарь",
 	"nav./library": "Библиотека",
@@ -350,6 +351,8 @@ export const ru: Translation = {
 	"artist.topAlbums": "Топ альбомов по часам",
 	"artist.allTracks": "Все треки",
 	"artist.allTracksCount": "Все треки ({count})",
+	"album.by": "от",
+	"album.byPlaysAlbums": "по прослушиваниям, все альбомы",
 	"artist.whenYouPlay": "Когда ты их слушаешь (час суток)",
 	"artist.byWeekday": "Когда ты их слушаешь (день недели)",
 	"artist.peak": "пик",
@@ -382,9 +385,11 @@ export const ru: Translation = {
 	"links.unknownArtist": "неизвестный исполнитель",
 
 	// --- command palette ---------------------------------------------------
-	"palette.placeholder": "Поиск треков и исполнителей…",
+	"palette.placeholder": "Поиск треков, исполнителей, альбомов, страниц…",
 	"palette.artist": "исполнитель",
+	"palette.album": "альбом",
 	"palette.track": "трек",
+	"palette.page": "страница",
 	"palette.noMatches": "Нет совпадений",
 
 	// --- Story -------------------------------------------------------------

@@ -34,6 +34,16 @@ export type TopArtist = {
 	tracks: number;
 };
 
+// An album row in the Top Albums list. Spotify exports carry no album id, so an
+// album is keyed by (artist, album) — both ride along for linking.
+export type TopAlbum = {
+	album: string;
+	artist: string;
+	plays: number;
+	hours: number;
+	tracks: number;
+};
+
 export type Bucket = { bucket: number; plays: number; hours: number };
 
 export type TrackRow = {
@@ -167,11 +177,31 @@ export type ArtistDetail = {
 	hours: number;
 	tracks: number;
 	skip_ratio: number;
+	skip_ratio_all: number; // library-wide baseline, for contrast
 	first_play: string;
 	last_play: string;
 	rank_plays: number;
 	monthly: MonthCount[];
+	hourly: Bucket[];
+	weekly: Bucket[]; // isodow buckets 1..7
 	albums: AlbumRow[];
+};
+
+// Album detail mirrors ArtistDetail; `artist` is the owning artist (links back).
+export type AlbumDetail = {
+	album: string;
+	artist: string;
+	plays: number;
+	hours: number;
+	tracks: number;
+	skip_ratio: number;
+	skip_ratio_all: number;
+	first_play: string;
+	last_play: string;
+	rank_plays: number; // rank among albums by plays
+	monthly: MonthCount[];
+	hourly: Bucket[];
+	weekly: Bucket[];
 };
 
 export type DayCount = { date: string; plays: number; hours: number };
@@ -417,6 +447,9 @@ export const api = {
 	topArtists: (metric: Metric, p: Period, minMs: number, limit: number) =>
 		q.topArtists(metric, p, minMs, limit),
 
+	topAlbums: (metric: Metric, p: Period, minMs: number, limit: number) =>
+		q.topAlbums(metric, p, minMs, limit),
+
 	hourly: (p: Period) => q.hourly(p),
 	weekly: (p: Period) => q.weekly(p),
 
@@ -436,6 +469,9 @@ export const api = {
 
 	artist: (name: string) => q.artist(name),
 	artistTracks: (name: string) => q.artistTracks(name),
+
+	album: (artist: string, name: string) => q.album(artist, name),
+	albumTracks: (artist: string, name: string) => q.albumTracks(artist, name),
 
 	calendar: (year?: number) => q.calendar(year),
 	onThisDay: () => q.onThisDay(),

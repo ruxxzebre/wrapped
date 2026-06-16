@@ -34,3 +34,12 @@ export const title = style({
 });
 
 export const sub = style({ fontSize: vars.font.lg });
+
+// One line in a multi-line subtitle (album/artist headers stack several). Block
+// so the inline Muted spans don't run together; track header keeps its single
+// inline line untouched.
+export const subLine = style({
+	display: "block",
+	marginTop: vars.space.xs,
+	selectors: { "&:first-child": { marginTop: 0 } },
+});

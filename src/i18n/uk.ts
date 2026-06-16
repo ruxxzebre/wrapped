@@ -16,6 +16,7 @@ export const uk: Translation = {
 	"nav./story": "Історія",
 	"nav./top-tracks": "Топ треків",
 	"nav./top-artists": "Топ виконавців",
+	"nav./top-albums": "Топ альбомів",
 	"nav./patterns": "Патерни",
 	"nav./calendar": "Календар",
 	"nav./library": "Бібліотека",
@@ -351,6 +352,8 @@ export const uk: Translation = {
 	"artist.topAlbums": "Топ альбомів за годинами",
 	"artist.allTracks": "Усі треки",
 	"artist.allTracksCount": "Усі треки ({count})",
+	"album.by": "від",
+	"album.byPlaysAlbums": "за прослуховуваннями, усі альбоми",
 	"artist.whenYouPlay": "Коли ти їх слухаєш (година доби)",
 	"artist.byWeekday": "Коли ти їх слухаєш (день тижня)",
 	"artist.peak": "пік",
@@ -383,9 +386,11 @@ export const uk: Translation = {
 	"links.unknownArtist": "невідомий виконавець",
 
 	// --- command palette ---------------------------------------------------
-	"palette.placeholder": "Пошук треків і виконавців…",
+	"palette.placeholder": "Пошук треків, виконавців, альбомів, сторінок…",
 	"palette.artist": "виконавець",
+	"palette.album": "альбом",
 	"palette.track": "трек",
+	"palette.page": "сторінка",
 	"palette.noMatches": "Немає збігів",
 
 	// --- Story -------------------------------------------------------------

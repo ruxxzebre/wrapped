@@ -160,6 +160,38 @@ export function ArtistLink({ name, muted }: { name: string; muted?: boolean }) {
 	);
 }
 
+// Clickable album name. An album is keyed by (artist, album) — both ride in the
+// route params. Warms the detail + track list on dwell, like ArtistLink.
+export function AlbumLink({
+	album,
+	artist,
+	muted,
+}: {
+	album: string;
+	artist: string;
+	muted?: boolean;
+}) {
+	const t = useT();
+	const qc = useQueryClient();
+	const ref = useDwellPrefetch<HTMLAnchorElement>(() => {
+		qc.prefetchQuery(q.album(artist, album));
+		qc.prefetchQuery(q.albumTracks(artist, album));
+	});
+	if (!album || album === "?")
+		return <Muted>{album || t("common.dash")}</Muted>;
+	return (
+		<Link
+			ref={ref}
+			to="/album/$artist/$album"
+			params={{ artist, album }}
+			className={muted ? `${css.entity} ${css.entityMuted}` : css.entity}
+			title={album}
+		>
+			{album}
+		</Link>
+	);
+}
+
 // Opens a track in Spotify. The `spotify:track:<id>` URI deep-links straight
 // into the installed desktop/mobile app; we hand the web player URL to the
 // anchor so it still resolves in a browser when the app isn't present (the

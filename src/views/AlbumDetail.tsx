@@ -1,11 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
 import { getRouteApi } from "@tanstack/react-router";
 import { useMemo } from "react";
-import type { AlbumRow, TrackRow } from "../api";
+import type { TrackRow } from "../api";
 import { fmtDate, fmtHours, fmtInt, fmtMonth, fmtPct } from "../format";
 import { type TFunction, useT } from "../i18n";
 import {
-	AlbumLink,
+	ArtistLink,
 	BackLink,
 	TrackLink,
 	usePrefetchTrackDetails,
@@ -29,26 +29,6 @@ import {
 	MonthlyChart,
 	WeekBars,
 } from "../widgets";
-
-const albumColumns = (t: TFunction, artist: string): Column<AlbumRow>[] => [
-	{
-		key: "album",
-		header: t("col.album"),
-		cell: (a) => <AlbumLink album={a.album} artist={artist} />,
-	},
-	{
-		key: "plays",
-		header: t("col.plays"),
-		align: "right",
-		cell: (a) => fmtInt(a.plays),
-	},
-	{
-		key: "hours",
-		header: t("col.hours"),
-		align: "right",
-		cell: (a) => fmtHours(a.hours),
-	},
-];
 
 const trackColumns = (t: TFunction): Column<TrackRow>[] => [
 	{
@@ -91,15 +71,15 @@ const trackColumns = (t: TFunction): Column<TrackRow>[] => [
 	},
 ];
 
-const route = getRouteApi("/artist/$name");
+const route = getRouteApi("/album/$artist/$album");
 
-export default function ArtistDetail() {
+export default function AlbumDetail() {
 	const t = useT();
-	const { name } = route.useParams();
-	const detail = useQuery(q.artist(name));
-	const tracks = useQuery(q.artistTracks(name));
+	const { artist, album } = route.useParams();
+	const detail = useQuery(q.album(artist, album));
+	const tracks = useQuery(q.albumTracks(artist, album));
 
-	// Batch-warm the full detail for this artist's track list (all linkable below).
+	// Batch-warm the full detail for this album's track list (all linkable below).
 	usePrefetchTrackDetails(tracks.data?.map((row) => row.track_uri) ?? []);
 
 	// "Deep cuts vs hits": share of plays concentrated in the top 3 tracks.
@@ -112,7 +92,7 @@ export default function ArtistDetail() {
 		return top3 / total;
 	}, [tracks.data]);
 
-	// Peak obsession month + loyalty span, derived from the monthly timeline.
+	// Peak month + loyalty span, derived from the monthly timeline.
 	const stats = useMemo(() => {
 		const rows = detail.data?.monthly;
 		if (!rows || rows.length === 0) return null;
@@ -121,7 +101,7 @@ export default function ArtistDetail() {
 		return { peak, activeMonths: rows.length, years: years.size };
 	}, [detail.data]);
 
-	// Gateway: the very first track of theirs you ever played.
+	// Gateway: the very first track off this album you ever played.
 	const gateway = useMemo(() => {
 		const rows = tracks.data;
 		if (!rows || rows.length === 0) return null;
@@ -143,7 +123,7 @@ export default function ArtistDetail() {
 		{
 			label: t("detail.rank"),
 			value: d.rank_plays ? `#${fmtInt(d.rank_plays)}` : t("common.dash"),
-			sub: t("detail.byPlaysLifetime"),
+			sub: t("album.byPlaysAlbums"),
 		},
 		{
 			label: t("detail.firstHeard"),
@@ -170,9 +150,14 @@ export default function ArtistDetail() {
 		<>
 			<DetailHead
 				back={<BackLink />}
-				title={d.artist}
+				title={d.album}
 				sub={
 					<>
+						<SubLine>
+							<Muted>
+								{t("album.by")} <ArtistLink name={d.artist} />
+							</Muted>
+						</SubLine>
 						{top3Share !== null && (
 							<SubLine>
 								<Muted>
@@ -219,16 +204,6 @@ export default function ArtistDetail() {
 					</WhenVisible>
 				</Panel>
 			</Grid2>
-
-			{d.albums.length > 0 && (
-				<Panel title={t("artist.topAlbums")}>
-					<DataTable
-						rows={d.albums}
-						columns={albumColumns(t, d.artist)}
-						rowKey={(a) => a.album}
-					/>
-				</Panel>
-			)}
 
 			<Panel
 				title={
