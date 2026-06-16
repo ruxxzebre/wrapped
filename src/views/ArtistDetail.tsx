@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { getRouteApi } from "@tanstack/react-router";
 import { useMemo } from "react";
 import type { AlbumRow, TrackRow } from "../api";
-import { fmtDate, fmtHours, fmtInt, fmtPct } from "../format";
+import { fmtDate, fmtHours, fmtInt, fmtMonth, fmtPct } from "../format";
 import { type TFunction, useT } from "../i18n";
 import { BackLink, TrackLink, usePrefetchTrackDetails } from "../links";
 import { q } from "../queries";
@@ -10,12 +10,19 @@ import {
 	type Column,
 	DataTable,
 	DetailHead,
+	Grid2,
 	Muted,
 	Panel,
 	Status,
 	WhenVisible,
 } from "../ui";
-import { Cards, ChartSkeleton, MonthlyChart } from "../widgets";
+import {
+	Cards,
+	ChartSkeleton,
+	HourBars,
+	MonthlyChart,
+	WeekBars,
+} from "../widgets";
 
 const albumColumns = (t: TFunction): Column<AlbumRow>[] => [
 	{ key: "album", header: t("col.album"), cell: (a) => a.album },
@@ -95,6 +102,22 @@ export default function ArtistDetail() {
 		return top3 / total;
 	}, [tracks.data]);
 
+	// Peak obsession month + loyalty span, derived from the monthly timeline.
+	const stats = useMemo(() => {
+		const rows = detail.data?.monthly;
+		if (!rows || rows.length === 0) return null;
+		const peak = rows.reduce((a, b) => (b.plays > a.plays ? b : a));
+		const years = new Set(rows.map((m) => m.month.slice(0, 4)));
+		return { peak, activeMonths: rows.length, years: years.size };
+	}, [detail.data]);
+
+	// Gateway: the very first track of theirs you ever played.
+	const gateway = useMemo(() => {
+		const rows = tracks.data;
+		if (!rows || rows.length === 0) return null;
+		return rows.reduce((a, b) => (b.first_play < a.first_play ? b : a));
+	}, [tracks.data]);
+
 	if (!detail.data) return <Status error={detail.error} />;
 	const d = detail.data;
 
@@ -102,7 +125,11 @@ export default function ArtistDetail() {
 		{ label: t("card.plays"), value: fmtInt(d.plays) },
 		{ label: t("card.hours"), value: fmtHours(d.hours) },
 		{ label: t("card.tracks"), value: fmtInt(d.tracks) },
-		{ label: t("detail.skipRate"), value: fmtPct(d.skip_ratio) },
+		{
+			label: t("detail.skipRate"),
+			value: fmtPct(d.skip_ratio),
+			sub: t("artist.skipVsBaseline", { pct: fmtPct(d.skip_ratio_all) }),
+		},
 		{
 			label: t("detail.rank"),
 			value: d.rank_plays ? `#${fmtInt(d.rank_plays)}` : t("common.dash"),
@@ -113,6 +140,20 @@ export default function ArtistDetail() {
 			value: fmtDate(d.first_play),
 			sub: t("summary.latest", { date: fmtDate(d.last_play) }),
 		},
+		...(stats
+			? [
+					{
+						label: t("artist.peak"),
+						value: fmtMonth(stats.peak.month),
+						sub: t("artist.peakSub", { plays: fmtInt(stats.peak.plays) }),
+					},
+					{
+						label: t("artist.loyalty"),
+						value: t("artist.loyaltyYears", { years: stats.years }),
+						sub: t("artist.loyaltySub", { months: stats.activeMonths }),
+					},
+				]
+			: []),
 	];
 
 	return (
@@ -121,17 +162,26 @@ export default function ArtistDetail() {
 				back={<BackLink />}
 				title={d.artist}
 				sub={
-					top3Share !== null && (
-						<Muted>
-							{t("artist.top3", {
-								pct: fmtPct(top3Share),
-								verdict:
-									top3Share > 0.6
-										? t("artist.liveOnHits")
-										: t("artist.wholeCatalogue"),
-							})}
-						</Muted>
-					)
+					<>
+						{top3Share !== null && (
+							<Muted>
+								{t("artist.top3", {
+									pct: fmtPct(top3Share),
+									verdict:
+										top3Share > 0.6
+											? t("artist.liveOnHits")
+											: t("artist.wholeCatalogue"),
+								})}
+							</Muted>
+						)}
+						{gateway && (
+							<Muted>
+								{t("artist.gateway")}{" "}
+								<TrackLink uri={gateway.track_uri} name={gateway.name} /> ·{" "}
+								{fmtDate(gateway.first_play)}
+							</Muted>
+						)}
+					</>
 				}
 			/>
 
@@ -142,6 +192,19 @@ export default function ArtistDetail() {
 					<MonthlyChart data={d.monthly} metric="hours" area />
 				</WhenVisible>
 			</Panel>
+
+			<Grid2>
+				<Panel title={t("artist.whenYouPlay")}>
+					<WhenVisible fallback={<ChartSkeleton height={200} />}>
+						<HourBars data={d.hourly} />
+					</WhenVisible>
+				</Panel>
+				<Panel title={t("artist.byWeekday")}>
+					<WhenVisible fallback={<ChartSkeleton height={200} />}>
+						<WeekBars data={d.weekly} />
+					</WhenVisible>
+				</Panel>
+			</Grid2>
 
 			{d.albums.length > 0 && (
 				<Panel title={t("artist.topAlbums")}>

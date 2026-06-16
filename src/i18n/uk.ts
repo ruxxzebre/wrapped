@@ -351,6 +351,15 @@ export const uk: Translation = {
 	"artist.topAlbums": "Топ альбомів за годинами",
 	"artist.allTracks": "Усі треки",
 	"artist.allTracksCount": "Усі треки ({count})",
+	"artist.whenYouPlay": "Коли ти їх слухаєш (година доби)",
+	"artist.byWeekday": "Коли ти їх слухаєш (день тижня)",
+	"artist.peak": "пік",
+	"artist.peakSub": "{plays} прослуховувань",
+	"artist.loyalty": "відданість",
+	"artist.loyaltyYears": "{years} р.",
+	"artist.loyaltySub": "{months} активних місяців",
+	"artist.gateway": "Перший трек:",
+	"artist.skipVsBaseline": "проти {pct} по бібліотеці",
 
 	// --- Year in review ----------------------------------------------------
 	"year.inReview": "Підсумки {year}",

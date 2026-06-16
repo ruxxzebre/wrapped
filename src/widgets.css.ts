@@ -51,3 +51,64 @@ export const bval = style({
 	color: vars.color.text,
 	fontVariantNumeric: "tabular-nums",
 });
+
+// Donut: ring chart with a centred total, dotted legend below.
+export const donut = style({
+	display: "flex",
+	flexDirection: "column",
+	gap: vars.space.md,
+});
+
+export const donutChart = style({
+	position: "relative",
+});
+
+export const donutTotal = style({
+	position: "absolute",
+	inset: 0,
+	display: "flex",
+	alignItems: "center",
+	justifyContent: "center",
+	fontSize: "1.4rem",
+	fontWeight: 700,
+	color: vars.color.text,
+	fontVariantNumeric: "tabular-nums",
+	pointerEvents: "none",
+});
+
+export const legend = style({
+	display: "flex",
+	flexWrap: "wrap",
+	gap: `${vars.space.xs} ${vars.space.lg}`,
+	margin: 0,
+	padding: 0,
+	listStyle: "none",
+});
+
+export const legendItem = style({
+	display: "flex",
+	alignItems: "center",
+	gap: vars.space.sm,
+	fontSize: "0.82rem",
+	minWidth: 0,
+});
+
+export const legendDot = style({
+	width: 10,
+	height: 10,
+	borderRadius: "50%",
+	flexShrink: 0,
+});
+
+export const legendLabel = style({
+	color: vars.color.muted,
+	overflow: "hidden",
+	textOverflow: "ellipsis",
+	whiteSpace: "nowrap",
+	maxWidth: "9rem",
+});
+
+export const legendVal = style({
+	color: vars.color.text,
+	fontVariantNumeric: "tabular-nums",
+});

@@ -350,6 +350,15 @@ export const ru: Translation = {
 	"artist.topAlbums": "Топ альбомов по часам",
 	"artist.allTracks": "Все треки",
 	"artist.allTracksCount": "Все треки ({count})",
+	"artist.whenYouPlay": "Когда ты их слушаешь (час суток)",
+	"artist.byWeekday": "Когда ты их слушаешь (день недели)",
+	"artist.peak": "пик",
+	"artist.peakSub": "{plays} прослушиваний",
+	"artist.loyalty": "верность",
+	"artist.loyaltyYears": "{years} г.",
+	"artist.loyaltySub": "{months} активных месяцев",
+	"artist.gateway": "Первый трек:",
+	"artist.skipVsBaseline": "против {pct} по библиотеке",
 
 	// --- Year in review ----------------------------------------------------
 	"year.inReview": "Итоги {year}",

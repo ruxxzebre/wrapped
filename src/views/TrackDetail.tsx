@@ -31,11 +31,11 @@ import {
 	WhenVisible,
 } from "../ui";
 import {
-	Breakdown,
 	BreakdownSkeleton,
 	Cards,
 	CardsSkeleton,
 	ChartSkeleton,
+	Donut,
 	HourBars,
 	MonthlyChart,
 	WeekBars,
@@ -350,12 +350,13 @@ function TrackPanels({ head, deep }: { head: TrackHead; deep: TrackDeep }) {
 			)}
 
 			<Grid2>
-				<Breakdown
+				<Donut
 					title={t("track.completion")}
 					rows={deep.completion}
 					fmtLabel={(l) => tEnum(t, "completion", l)}
+					ordered
 				/>
-				<Breakdown
+				<Donut
 					title={t("track.howItStarts")}
 					rows={deep.reason_start}
 					fmtLabel={(l) => tEnum(t, "reasonStart", l)}
@@ -363,16 +364,16 @@ function TrackPanels({ head, deep }: { head: TrackHead; deep: TrackDeep }) {
 			</Grid2>
 
 			<Grid2>
-				<Breakdown
+				<Donut
 					title={t("track.howItEnds")}
 					rows={deep.reason_end}
 					fmtLabel={(l) => tEnum(t, "reasonEnd", l)}
 				/>
-				<Breakdown title={t("track.platforms")} rows={deep.platforms} />
+				<Donut title={t("track.platforms")} rows={deep.platforms} />
 			</Grid2>
 
 			{deep.countries.length > 1 && (
-				<Breakdown title={t("track.countries")} rows={deep.countries} />
+				<Donut title={t("track.countries")} rows={deep.countries} />
 			)}
 
 			{deep.comeback && (

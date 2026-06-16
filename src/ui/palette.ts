@@ -24,6 +24,10 @@ export const chartColors = {
 	grid: palette.hairline,
 	accent: palette.accent,
 	info: palette.info,
+	// Categorical donut segments (platforms, start/end reasons, countries).
+	series: ["#1db954", "#3b82f6", "#a855f7", "#ffa42b", "#f15e6c", "#22d3ee"],
+	// Ordered good→bad ramp for the completion bands (finished…bailed…unknown).
+	ramp: ["#1db954", "#a3e635", "#ffa42b", "#f15e6c", "#6b7280"],
 	tooltip: {
 		contentStyle: {
 			background: palette.panelHover,

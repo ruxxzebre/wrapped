@@ -351,6 +351,15 @@ export const ro: Translation = {
 	"artist.topAlbums": "Top albume după ore",
 	"artist.allTracks": "Toate piesele",
 	"artist.allTracksCount": "Toate piesele ({count})",
+	"artist.whenYouPlay": "Când îi asculți (ora din zi)",
+	"artist.byWeekday": "Când îi asculți (ziua săptămânii)",
+	"artist.peak": "luna de vârf",
+	"artist.peakSub": "{plays} redări",
+	"artist.loyalty": "loialitate",
+	"artist.loyaltyYears": "{years} ani",
+	"artist.loyaltySub": "{months} luni active",
+	"artist.gateway": "Prima piesă:",
+	"artist.skipVsBaseline": "față de {pct} în bibliotecă",
 
 	// --- Year in review ----------------------------------------------------
 	"year.inReview": "{year} în retrospectivă",

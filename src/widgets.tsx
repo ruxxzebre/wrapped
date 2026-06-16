@@ -4,15 +4,18 @@ import {
 	Bar,
 	BarChart,
 	CartesianGrid,
+	Cell,
 	Line,
 	LineChart,
+	Pie,
+	PieChart,
 	ResponsiveContainer,
 	Tooltip,
 	XAxis,
 	YAxis,
 } from "recharts";
 import type { Bucket, LabelCount, MonthCount } from "./api";
-import { fmtInt, fmtMonth, weekdayShort } from "./format";
+import { fmtInt, fmtMonth, fmtPct, weekdayShort } from "./format";
 import { Card, CardGrid, chartColors, Panel, Skeleton } from "./ui";
 import * as css from "./widgets.css";
 
@@ -135,7 +138,7 @@ export function MonthlyChart({
 	);
 }
 
-export function HourBars({ data }: { data: Bucket[] }) {
+export function HourBars({ data = [] }: { data?: Bucket[] }) {
 	// Fill all 24 hours so empty hours read as gaps, not as compressed axes.
 	const byHour = new Map(data.map((b) => [b.bucket, b.plays]));
 	const rows = Array.from({ length: 24 }, (_, h) => ({
@@ -167,7 +170,7 @@ export function HourBars({ data }: { data: Bucket[] }) {
 
 // WeekBars mirrors HourBars for day-of-week: isodow buckets 1..7 (Mon..Sun),
 // every weekday filled so empty days read as gaps.
-export function WeekBars({ data }: { data: Bucket[] }) {
+export function WeekBars({ data = [] }: { data?: Bucket[] }) {
 	const byDow = new Map(data.map((b) => [b.bucket, b.plays]));
 	const rows = Array.from({ length: 7 }, (_, i) => ({
 		label: weekdayShort(i + 1),
@@ -295,6 +298,74 @@ export function Breakdown({
 						</div>
 					);
 				})}
+			</div>
+		</Panel>
+	);
+}
+
+// Donut renders a categorical split as a ring with a centred total and a
+// dotted legend — the approachable replacement for the proportion bar list.
+// `ordered` switches to the good→bad ramp for the completion bands.
+export function Donut({
+	title,
+	rows,
+	fmtLabel = (l) => l,
+	ordered = false,
+}: {
+	title: string;
+	rows: LabelCount[];
+	fmtLabel?: (label: string) => string;
+	ordered?: boolean;
+}) {
+	const total = rows.reduce((s, r) => s + r.plays, 0) || 1;
+	const palette = ordered ? chartColors.ramp : chartColors.series;
+	const data = rows.map((r, i) => ({
+		label: fmtLabel(r.label),
+		plays: r.plays,
+		color: palette[i % palette.length],
+	}));
+	return (
+		<Panel title={title}>
+			<div className={css.donut}>
+				<div className={css.donutChart}>
+					<ResponsiveContainer width="100%" height={180}>
+						<PieChart>
+							<Pie
+								data={data}
+								dataKey="plays"
+								nameKey="label"
+								innerRadius={55}
+								outerRadius={80}
+								paddingAngle={data.length > 1 ? 2 : 0}
+								stroke="none"
+								isAnimationActive={false}
+							>
+								{data.map((d) => (
+									<Cell key={d.label} fill={d.color} />
+								))}
+							</Pie>
+							<Tooltip
+								{...chartColors.tooltip}
+								formatter={(v) => {
+									const n = Number(v);
+									return [`${fmtInt(n)} · ${fmtPct(n / total)}`, ""];
+								}}
+							/>
+						</PieChart>
+					</ResponsiveContainer>
+					<span className={css.donutTotal}>{fmtInt(total)}</span>
+				</div>
+				<ul className={css.legend}>
+					{data.map((d) => (
+						<li className={css.legendItem} key={d.label}>
+							<span className={css.legendDot} style={{ background: d.color }} />
+							<span className={css.legendLabel} title={d.label}>
+								{d.label}
+							</span>
+							<span className={css.legendVal}>{fmtPct(d.plays / total)}</span>
+						</li>
+					))}
+				</ul>
 			</div>
 		</Panel>
 	);

@@ -1132,16 +1132,34 @@ export async function artist(name: string): Promise<ArtistDetail> {
 		[name],
 	);
 
+	// Library-wide skip baseline so the artist's own rate reads in context.
+	const skipAll = await query<{ s: number | null }>(
+		`SELECT avg(CASE WHEN was_skipped THEN 1.0 ELSE 0.0 END) AS s FROM listens`,
+	);
+
+	// Time-of-day and day-of-week histograms for this artist.
+	const artistBuckets = (expr: string) =>
+		query<Bucket>(
+			`SELECT ${expr} AS bucket, count(*) AS plays,
+			        sum(ms_played) / 3600000.0 AS hours
+			 FROM listens WHERE artist_name = ?
+			 GROUP BY bucket ORDER BY bucket`,
+			[name],
+		);
+
 	return {
 		artist: name,
 		plays: head.plays,
 		hours: head.hours ?? 0,
 		tracks: head.tracks,
 		skip_ratio: head.skip_ratio ?? 0,
+		skip_ratio_all: skipAll[0]?.s ?? 0,
 		first_play: head.first_play ?? "",
 		last_play: head.last_play ?? "",
 		rank_plays: rank[0]?.rnk ?? 0,
 		monthly: await monthly("artist_name = ?", name),
+		hourly: await artistBuckets("hour(started_local)"),
+		weekly: await artistBuckets("isodow(started_local)"),
 		albums: await query(
 			`
 			SELECT COALESCE(album_name, '?') AS album, count(*) AS plays,

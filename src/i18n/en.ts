@@ -351,6 +351,15 @@ export const en = {
 	"artist.topAlbums": "Top albums by hours",
 	"artist.allTracks": "All tracks",
 	"artist.allTracksCount": "All tracks ({count})",
+	"artist.whenYouPlay": "When you play them (hour of day)",
+	"artist.byWeekday": "When you play them (day of week)",
+	"artist.peak": "peak month",
+	"artist.peakSub": "{plays} plays",
+	"artist.loyalty": "loyalty",
+	"artist.loyaltyYears": "{years} yrs",
+	"artist.loyaltySub": "{months} active months",
+	"artist.gateway": "Gateway track:",
+	"artist.skipVsBaseline": "vs {pct} library-wide",
 
 	// --- Year in review ----------------------------------------------------
 	"year.inReview": "{year} in review",
