@@ -167,7 +167,7 @@ const libraryRoute = createRoute({
 	getParentRoute: () => rootRoute,
 	path: "/music/library",
 	component: Library,
-	staticData: { titleKey: "nav./library", tint: "neutral" },
+	staticData: { titleKey: "nav./library", tint: "neutral", fill: true },
 	loader: ({ context: { queryClient } }) =>
 		prefetch(queryClient, (qc) => qc.ensureQueryData(q.allTracks())),
 });
@@ -273,7 +273,7 @@ const playLogRoute = createRoute({
 	getParentRoute: () => rootRoute,
 	path: "/explore/play-log",
 	component: PlayLog,
-	staticData: { titleKey: "nav./play-log", tint: "neutral" },
+	staticData: { titleKey: "nav./play-log", tint: "neutral", fill: true },
 	validateSearch: (search: Record<string, unknown>): PlayLogSearch => ({
 		from: typeof search.from === "string" ? search.from : undefined,
 		to: typeof search.to === "string" ? search.to : undefined,
