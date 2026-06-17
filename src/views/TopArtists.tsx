@@ -69,7 +69,7 @@ export default function TopArtists() {
 					rows={rows}
 					columns={COLUMNS}
 					rowKey={(a) => a.artist}
-					height="calc(100vh - 13rem)"
+					fill
 					scrollRestorationId="top-artists"
 					onEndReached={() => {
 						if (query.hasNextPage && !query.isFetchingNextPage)

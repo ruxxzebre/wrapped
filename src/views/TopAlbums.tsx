@@ -75,7 +75,7 @@ export default function TopAlbums() {
 					rows={rows}
 					columns={COLUMNS}
 					rowKey={(a) => `${a.artist} ${a.album}`}
-					height="calc(100vh - 13rem)"
+					fill
 					scrollRestorationId="top-albums"
 					onEndReached={() => {
 						if (query.hasNextPage && !query.isFetchingNextPage)

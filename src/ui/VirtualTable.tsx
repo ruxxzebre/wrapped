@@ -21,6 +21,7 @@ export function VirtualTable<T>({
 	headerHeight = 34,
 	overscan = 15,
 	height = 600,
+	fill = false,
 	sort,
 	onSortChange,
 	onEndReached,
@@ -35,6 +36,12 @@ export function VirtualTable<T>({
 	headerHeight?: number;
 	overscan?: number;
 	height?: number | string;
+	/**
+	 * Grow to fill the parent flex column instead of taking a fixed `height`. The
+	 * parent must be a bounded flex column (e.g. App's fill route layout); the
+	 * scroll then lives only in this table, never in a second page-level scroller.
+	 */
+	fill?: boolean;
 	sort?: Sort;
 	onSortChange?: (s: Sort) => void;
 	/** Called when scrolling renders rows within endThreshold of the end. */
@@ -87,7 +94,7 @@ export function VirtualTable<T>({
 			<div
 				className={css.wrap}
 				ref={parentRef}
-				style={{ height }}
+				style={fill ? { flex: "1 1 0", minHeight: 0 } : { height }}
 				data-scroll-restoration-id={scrollRestorationId}
 			>
 				<div

@@ -81,7 +81,7 @@ export default function TopTracks() {
 					rows={rows}
 					columns={COLUMNS}
 					rowKey={(track) => track.track_uri}
-					height="calc(100vh - 13rem)"
+					fill
 					scrollRestorationId="top-tracks"
 					onEndReached={() => {
 						if (query.hasNextPage && !query.isFetchingNextPage)

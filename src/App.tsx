@@ -48,6 +48,9 @@ export default function App() {
 		: undefined;
 	const tint = headed?.staticData.tint ?? "neutral";
 	const bare = matches.some((m) => m.staticData.bare ?? false);
+	// Fill routes (Top* lists) own the viewport height: pane is a non-scrolling
+	// flex column and the view's table is the single scroll region.
+	const fill = matches.some((m) => m.staticData.fill ?? false);
 
 	// Gate the whole app on whether any history has been ingested. Until it has,
 	// the data endpoints would each error, so we show the import screen instead.
@@ -199,11 +202,15 @@ export default function App() {
 			)}
 			<main
 				data-scroll-restoration-id="main"
-				className={bare ? css.mainBare : css.main}
+				className={bare ? css.mainBare : fill ? css.mainFill : css.main}
 			>
 				{title && <PageHeader title={title} tint={tint} />}
 				{bare ? (
 					<Outlet />
+				) : fill ? (
+					<div className={css.contentFill}>
+						<Outlet />
+					</div>
 				) : (
 					<>
 						<div className={css.content}>

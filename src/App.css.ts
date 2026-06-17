@@ -162,6 +162,34 @@ export const mainBare = style({
 	containerType: "inline-size",
 });
 
+// Fill pane (Top* lists): a flex column that owns the viewport height. The pane
+// itself never scrolls (overflow hidden) — PageHeader sits at the top and the
+// view's table flex-grows to fill the rest, scrolling internally. This is what
+// kills the double scrollbar: one scroll region (the table), not two.
+export const mainFill = style({
+	flex: 1,
+	minWidth: 0,
+	display: "flex",
+	flexDirection: "column",
+	overflow: "hidden",
+	background: vars.color.bg,
+	containerType: "inline-size",
+});
+
+// Content wrapper for fill routes: bounds the view to a flex column whose
+// children (controls + table) divide the remaining height. minHeight:0 lets the
+// table shrink below its content so its own scrollbar — not the pane — engages.
+export const contentFill = style({
+	flex: 1,
+	minHeight: 0,
+	width: "100%",
+	maxWidth: "1400px",
+	margin: "0 auto",
+	padding: `0 ${contentPad} ${vars.space.lg}`,
+	display: "flex",
+	flexDirection: "column",
+});
+
 export const content = style({
 	maxWidth: "1400px",
 	margin: "0 auto",

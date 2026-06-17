@@ -60,6 +60,12 @@ declare module "@tanstack/react-router" {
 		tint?: Tint;
 		/** Bare tabs render full-bleed: no PageHeader, content wrapper, or footer. */
 		bare?: boolean;
+		/**
+		 * Fill tabs own the viewport height: the pane is a non-scrolling flex
+		 * column (PageHeader + flexing content, no footer) so the view's table is
+		 * the only scroll region — avoids a second, page-level scrollbar.
+		 */
+		fill?: boolean;
 	}
 	interface Register {
 		router: typeof router;
@@ -131,7 +137,7 @@ const tracksRoute = createRoute({
 	getParentRoute: () => rootRoute,
 	path: "/music/tracks",
 	component: TopTracks,
-	staticData: { titleKey: "nav./top-tracks", tint: "neutral" },
+	staticData: { titleKey: "nav./top-tracks", tint: "neutral", fill: true },
 	loader: ({ context: { queryClient } }) =>
 		prefetch(queryClient, (qc) =>
 			qc.ensureInfiniteQueryData(q.topTracks("plays", {}, 30000)),
@@ -141,7 +147,7 @@ const artistsRoute = createRoute({
 	getParentRoute: () => rootRoute,
 	path: "/music/artists",
 	component: TopArtists,
-	staticData: { titleKey: "nav./top-artists", tint: "neutral" },
+	staticData: { titleKey: "nav./top-artists", tint: "neutral", fill: true },
 	loader: ({ context: { queryClient } }) =>
 		prefetch(queryClient, (qc) =>
 			qc.ensureInfiniteQueryData(q.topArtists("plays", {})),
@@ -151,7 +157,7 @@ const albumsRoute = createRoute({
 	getParentRoute: () => rootRoute,
 	path: "/music/albums",
 	component: TopAlbums,
-	staticData: { titleKey: "nav./top-albums", tint: "neutral" },
+	staticData: { titleKey: "nav./top-albums", tint: "neutral", fill: true },
 	loader: ({ context: { queryClient } }) =>
 		prefetch(queryClient, (qc) =>
 			qc.ensureInfiniteQueryData(q.topAlbums("plays", {})),
