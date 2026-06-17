@@ -34,6 +34,8 @@ jobs:
 
       - name: Build
         run: pnpm build
+        env:
+          WRAPPED: "1"
 
       - name: Publish build branch
         run: |
