@@ -9,6 +9,7 @@ import type {
 	CompletionYear,
 	DayCount,
 	Device,
+	Discovery,
 	Hiatus,
 	LabelCount,
 	Loop,
@@ -16,6 +17,7 @@ import type {
 	MonthCount,
 	Neighbor,
 	OnThisDay,
+	Pace,
 	Period,
 	PlayRow,
 	PlaysPage,
@@ -23,6 +25,7 @@ import type {
 	RangeBucket,
 	RangeIndex,
 	RankYear,
+	Records,
 	Rediscovery,
 	SeasonalTrack,
 	SplitArtist,
@@ -35,6 +38,7 @@ import type {
 	StoryObsession,
 	StoryOrigin,
 	StoryPersona,
+	Streak,
 	Summary,
 	TopAlbum,
 	TopArtist,
@@ -412,6 +416,205 @@ export async function story(): Promise<Story> {
 		comeback,
 		marathon,
 		devotion,
+	};
+}
+
+// --- streak: consecutive listening days -------------------------------------
+
+// The current and all-time-longest runs of consecutive calendar days with at
+// least one real stream. Classic gaps-and-islands: number the distinct active
+// days, and (day - row_number) is constant within a consecutive run, so it keys
+// the islands. A day counts only when `counts_as_stream` (≥30s), so a day spent
+// skipping doesn't prop up a streak. "Current" is the run ending on the most
+// recent active day — anchored on the data, not wall-clock, since the export is
+// static. Returns null for an empty library so the card omits itself.
+export async function streak(): Promise<Streak | null> {
+	const row = (
+		await query<{
+			longest: number | null;
+			longest_start: string | null;
+			longest_end: string | null;
+			current: number | null;
+			current_start: string | null;
+			last_active: string | null;
+		}>(`
+		WITH days AS (
+			SELECT DISTINCT CAST(started_local AS DATE) AS d
+			FROM listens WHERE counts_as_stream
+		),
+		grp AS (
+			SELECT d, d - CAST(ROW_NUMBER() OVER (ORDER BY d) AS INTEGER) AS g
+			FROM days
+		),
+		runs AS (
+			SELECT min(d) AS start_d, max(d) AS end_d, count(*)::INTEGER AS len
+			FROM grp GROUP BY g
+		)
+		SELECT
+			(SELECT max(len) FROM runs) AS longest,
+			strftime((SELECT start_d FROM runs ORDER BY len DESC, end_d DESC LIMIT 1),
+			         '%Y-%m-%d') AS longest_start,
+			strftime((SELECT end_d FROM runs ORDER BY len DESC, end_d DESC LIMIT 1),
+			         '%Y-%m-%d') AS longest_end,
+			(SELECT len FROM runs ORDER BY end_d DESC LIMIT 1) AS current,
+			strftime((SELECT start_d FROM runs ORDER BY end_d DESC LIMIT 1),
+			         '%Y-%m-%d') AS current_start,
+			strftime((SELECT max(end_d) FROM runs), '%Y-%m-%d') AS last_active`)
+	)[0];
+	if (!row || row.longest === null) return null;
+	return {
+		longest: row.longest,
+		longest_start: row.longest_start ?? "",
+		longest_end: row.longest_end ?? "",
+		current: row.current ?? 0,
+		current_start: row.current_start ?? "",
+		last_active: row.last_active ?? "",
+	};
+}
+
+// --- pace: this year against last year, to the same point ------------------
+
+// This-year-to-date totals vs the same day-of-year last year, anchored on the
+// data's latest play (the export is static, so "this year" is the year of
+// max(ts) and "to date" is its day-of-year). The view turns this into an
+// ahead/behind verdict and a naive year-end projection. Null when empty.
+export async function pace(): Promise<Pace | null> {
+	const row = (
+		await query<Pace>(`
+		WITH b AS (
+			SELECT year(max(ts)) AS yr, dayofyear(max(ts)) AS doy FROM listens
+		)
+		SELECT b.yr AS year, b.doy AS doy,
+		       count(*) FILTER (WHERE year(l.ts) = b.yr)                 AS this_plays,
+		       COALESCE(sum(l.ms_played) FILTER (WHERE year(l.ts) = b.yr), 0)
+		           / 3600000.0                                           AS this_hours,
+		       count(*) FILTER (
+		           WHERE year(l.ts) = b.yr - 1 AND dayofyear(l.ts) <= b.doy
+		       )                                                         AS prev_plays,
+		       COALESCE(sum(l.ms_played) FILTER (
+		           WHERE year(l.ts) = b.yr - 1 AND dayofyear(l.ts) <= b.doy
+		       ), 0) / 3600000.0                                         AS prev_hours
+		FROM listens l, b
+		GROUP BY b.yr, b.doy`)
+	)[0];
+	return row ?? null;
+}
+
+// --- discovery: new artists/tracks met this year ---------------------------
+
+// First-ever play per artist and per track gives a "met this year" count; the
+// same point last year rides along for an ahead/behind read, and the single
+// biggest discovery year (most artists first heard) feeds the records board.
+// Anchored on max(ts) like pace(). Null when empty.
+export async function discovery(): Promise<Discovery | null> {
+	const row = (
+		await query<{
+			year: number | null;
+			this_artists: number;
+			this_tracks: number;
+			prev_artists: number;
+			best_year: number | null;
+			best_count: number | null;
+		}>(`
+		WITH b AS (
+			SELECT year(max(ts)) AS yr, dayofyear(max(ts)) AS doy FROM listens
+		),
+		afirst AS (
+			SELECT artist_name, min(ts) AS f
+			FROM listens WHERE artist_name IS NOT NULL GROUP BY artist_name
+		),
+		tfirst AS (SELECT track_uri, min(ts) AS f FROM listens GROUP BY track_uri),
+		ayear AS (SELECT year(f) AS yr, count(*) AS n FROM afirst GROUP BY year(f))
+		SELECT b.yr AS year,
+		       (SELECT count(*) FROM afirst WHERE year(f) = b.yr)        AS this_artists,
+		       (SELECT count(*) FROM tfirst WHERE year(f) = b.yr)        AS this_tracks,
+		       (SELECT count(*) FROM afirst
+		           WHERE year(f) = b.yr - 1 AND dayofyear(f) <= b.doy)   AS prev_artists,
+		       (SELECT yr  FROM ayear ORDER BY n DESC LIMIT 1)           AS best_year,
+		       (SELECT max(n) FROM ayear)                                AS best_count
+		FROM b`)
+	)[0];
+	if (!row || row.year === null) return null;
+	return {
+		year: row.year,
+		this_artists: row.this_artists,
+		this_tracks: row.this_tracks,
+		prev_artists: row.prev_artists,
+		best_year: row.best_year ?? row.year,
+		best_count: row.best_count ?? 0,
+	};
+}
+
+// --- records: the personal-bests board -------------------------------------
+
+// The hero superlatives gathered in one pass: the single most-consumed calendar
+// day, the most plays of one track in a day, and the longest back-to-back
+// repeat-one run. The board also shows the longest streak and biggest discovery
+// year, but those come free from the streak()/discovery() queries the same page
+// already runs. Null when empty.
+export async function records(): Promise<Records | null> {
+	const row = (
+		await query<{
+			day_date: string | null;
+			day_hours: number | null;
+			obs_uri: string | null;
+			obs_name: string | null;
+			obs_artist: string | null;
+			obs_plays: number | null;
+			loop_uri: string | null;
+			loop_name: string | null;
+			loop_artist: string | null;
+			loop_run: number | null;
+		}>(`
+		WITH day AS (
+			SELECT CAST(started_local AS DATE) AS d, sum(ms_played) / 3600000.0 AS h
+			FROM listens GROUP BY d ORDER BY h DESC LIMIT 1
+		),
+		obs AS (
+			SELECT track_uri,
+			       COALESCE(max(track_name), '?')  AS name,
+			       COALESCE(max(artist_name), '?') AS artist,
+			       count(*) AS plays
+			FROM listens GROUP BY track_uri, CAST(started_local AS DATE)
+			ORDER BY plays DESC LIMIT 1
+		),
+		flagged AS (
+			SELECT track_uri, track_name, artist_name, started_local,
+			       CASE WHEN LAG(track_uri) OVER (ORDER BY started_local) = track_uri
+			            THEN 0 ELSE 1 END AS is_new
+			FROM listens
+		),
+		runs AS (SELECT *, sum(is_new) OVER (ORDER BY started_local) AS rid FROM flagged),
+		loop AS (
+			SELECT track_uri,
+			       COALESCE(max(track_name), '?')  AS name,
+			       COALESCE(max(artist_name), '?') AS artist,
+			       count(*) AS run
+			FROM runs GROUP BY track_uri, rid ORDER BY run DESC LIMIT 1
+		)
+		SELECT strftime((SELECT d FROM day), '%Y-%m-%d') AS day_date,
+		       (SELECT h        FROM day)  AS day_hours,
+		       (SELECT track_uri FROM obs) AS obs_uri,
+		       (SELECT name     FROM obs)  AS obs_name,
+		       (SELECT artist   FROM obs)  AS obs_artist,
+		       (SELECT plays    FROM obs)  AS obs_plays,
+		       (SELECT track_uri FROM loop) AS loop_uri,
+		       (SELECT name     FROM loop) AS loop_name,
+		       (SELECT artist   FROM loop) AS loop_artist,
+		       (SELECT run      FROM loop) AS loop_run`)
+	)[0];
+	if (!row || row.day_date === null) return null;
+	return {
+		day_date: row.day_date,
+		day_hours: row.day_hours ?? 0,
+		obs_uri: row.obs_uri ?? "",
+		obs_name: row.obs_name ?? "?",
+		obs_artist: row.obs_artist ?? "?",
+		obs_plays: row.obs_plays ?? 0,
+		loop_uri: row.loop_uri ?? "",
+		loop_name: row.loop_name ?? "?",
+		loop_artist: row.loop_artist ?? "?",
+		loop_run: row.loop_run ?? 0,
 	};
 }
 

@@ -216,6 +216,44 @@ export const en = {
 	"summary.hoursPerYear": "Hours per year",
 	"summary.playsPerYear": "Plays per year",
 
+	// --- Streak ------------------------------------------------------------
+	"streak.title": "Listening streak",
+	"streak.daysUnit_one": "day in a row",
+	"streak.daysUnit_other": "days in a row",
+	"streak.recordBadge": "🏆 Your longest streak ever",
+	"streak.behindRecord_one": "{n} day short of your record ({best})",
+	"streak.behindRecord_other": "{n} days short of your record ({best})",
+	"streak.asOf": "as of {date}",
+
+	// --- Milestones --------------------------------------------------------
+	"milestone.title": "Next milestones",
+
+	// --- Pace --------------------------------------------------------------
+	"pace.title": "{year} so far",
+	"pace.hoursThisYear": "hours this year",
+	"pace.vsLastYear": "vs {hours} h by this day last year",
+	"pace.onPace": "On pace for ~{hours} h",
+	"pace.biggestYear": "your biggest year",
+	"pace.plays": "{n} plays so far",
+
+	// --- Discovery ---------------------------------------------------------
+	"discovery.title": "New in {year}",
+	"discovery.artists": "new artists",
+	"discovery.tracks": "{n} new tracks",
+	"discovery.vsLastYear": "vs {n} by this day last year",
+
+	// --- Personal records --------------------------------------------------
+	"records.title": "Personal records",
+	"records.biggestDay": "Biggest day",
+	"records.hours": "{n} h",
+	"records.onRepeat": "Song on repeat",
+	"records.times": "{n}×",
+	"records.longestStreak": "Longest streak",
+	"records.daysInARow": "days in a row",
+	"records.longestLoop": "Back-to-back plays",
+	"records.discoveryYear": "Top discovery year",
+	"records.artistsIn": "new artists in {year}",
+
 	// --- On this day -------------------------------------------------------
 	"onThisDay.title": "On this day",
 	"onThisDay.thisWeek": "this week",

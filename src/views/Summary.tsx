@@ -1,10 +1,15 @@
 import { useQuery } from "@tanstack/react-query";
 import { lazy, Suspense } from "react";
+import DiscoveryCard from "../components/DiscoveryCard";
+import MilestoneCard from "../components/MilestoneCard";
 import OnThisDay from "../components/OnThisDay";
+import PaceCard from "../components/PaceCard";
+import RecordsBoard from "../components/RecordsBoard";
+import StreakCard from "../components/StreakCard";
 import { fmtDate, fmtHours, fmtInt } from "../format";
 import { useT } from "../i18n";
 import { q } from "../queries";
-import { chartColors, Panel, Status } from "../ui";
+import { chartColors, Grid2, Panel, Status } from "../ui";
 import { Cards, CardsSkeleton, ChartSkeleton } from "../widgets";
 
 // recharts is heavy and the home view is eager, so the year charts (below the
@@ -60,6 +65,17 @@ export default function Summary() {
 	return (
 		<>
 			{cards ? <Cards items={cards} /> : <CardsSkeleton count={6} />}
+
+			<Grid2>
+				<StreakCard />
+				<PaceCard />
+			</Grid2>
+
+			<MilestoneCard />
+
+			<RecordsBoard />
+
+			<DiscoveryCard />
 
 			<OnThisDay />
 

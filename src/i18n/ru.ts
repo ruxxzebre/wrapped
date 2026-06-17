@@ -213,6 +213,46 @@ export const ru: Translation = {
 	"summary.hoursPerYear": "Часов в год",
 	"summary.playsPerYear": "Прослушиваний в год",
 
+	// --- Streak ------------------------------------------------------------
+	"streak.title": "Серия прослушиваний",
+	"streak.daysUnit_one": "день подряд",
+	"streak.daysUnit_few": "дня подряд",
+	"streak.daysUnit_many": "дней подряд",
+	"streak.recordBadge": "🏆 Твоя самая длинная серия за всё время",
+	"streak.behindRecord_one": "{n} день до твоего рекорда ({best})",
+	"streak.behindRecord_few": "{n} дня до твоего рекорда ({best})",
+	"streak.behindRecord_many": "{n} дней до твоего рекорда ({best})",
+	"streak.asOf": "по состоянию на {date}",
+
+	// --- Milestones --------------------------------------------------------
+	"milestone.title": "Следующие вехи",
+
+	// --- Pace --------------------------------------------------------------
+	"pace.title": "{year} пока что",
+	"pace.hoursThisYear": "часов в этом году",
+	"pace.vsLastYear": "против {hours} ч на этот день год назад",
+	"pace.onPace": "На пути к ~{hours} ч",
+	"pace.biggestYear": "твой самый большой год",
+	"pace.plays": "{n} прослушиваний пока что",
+
+	// --- Discovery ---------------------------------------------------------
+	"discovery.title": "Новое в {year}",
+	"discovery.artists": "новых исполнителей",
+	"discovery.tracks": "{n} новых треков",
+	"discovery.vsLastYear": "против {n} на этот день год назад",
+
+	// --- Personal records --------------------------------------------------
+	"records.title": "Личные рекорды",
+	"records.biggestDay": "Самый большой день",
+	"records.hours": "{n} ч",
+	"records.onRepeat": "Песня на повторе",
+	"records.times": "{n}×",
+	"records.longestStreak": "Самая длинная серия",
+	"records.daysInARow": "дней подряд",
+	"records.longestLoop": "Проигрываний подряд",
+	"records.discoveryYear": "Год открытий",
+	"records.artistsIn": "новых исполнителей в {year}",
+
 	// --- On this day -------------------------------------------------------
 	"onThisDay.title": "В этот день",
 	"onThisDay.thisWeek": "на этой неделе",

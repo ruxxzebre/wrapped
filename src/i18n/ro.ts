@@ -214,6 +214,46 @@ export const ro: Translation = {
 	"summary.hoursPerYear": "Ore pe an",
 	"summary.playsPerYear": "Redări pe an",
 
+	// --- Streak ------------------------------------------------------------
+	"streak.title": "Serie de ascultare",
+	"streak.daysUnit_one": "zi la rând",
+	"streak.daysUnit_few": "zile la rând",
+	"streak.daysUnit_other": "de zile la rând",
+	"streak.recordBadge": "🏆 Cea mai lungă serie de până acum",
+	"streak.behindRecord_one": "{n} zi până la recordul tău ({best})",
+	"streak.behindRecord_few": "{n} zile până la recordul tău ({best})",
+	"streak.behindRecord_other": "{n} de zile până la recordul tău ({best})",
+	"streak.asOf": "la data de {date}",
+
+	// --- Milestones --------------------------------------------------------
+	"milestone.title": "Următoarele borne",
+
+	// --- Pace --------------------------------------------------------------
+	"pace.title": "{year} până acum",
+	"pace.hoursThisYear": "ore anul acesta",
+	"pace.vsLastYear": "față de {hours} h la această zi anul trecut",
+	"pace.onPace": "Pe drumul spre ~{hours} h",
+	"pace.biggestYear": "cel mai mare an al tău",
+	"pace.plays": "{n} redări până acum",
+
+	// --- Discovery ---------------------------------------------------------
+	"discovery.title": "Nou în {year}",
+	"discovery.artists": "artiști noi",
+	"discovery.tracks": "{n} piese noi",
+	"discovery.vsLastYear": "față de {n} la această zi anul trecut",
+
+	// --- Personal records --------------------------------------------------
+	"records.title": "Recorduri personale",
+	"records.biggestDay": "Cea mai mare zi",
+	"records.hours": "{n} h",
+	"records.onRepeat": "Melodie la repetat",
+	"records.times": "{n}×",
+	"records.longestStreak": "Cea mai lungă serie",
+	"records.daysInARow": "zile la rând",
+	"records.longestLoop": "Redări consecutive",
+	"records.discoveryYear": "Anul descoperirilor",
+	"records.artistsIn": "artiști noi în {year}",
+
 	// --- On this day -------------------------------------------------------
 	"onThisDay.title": "În această zi",
 	"onThisDay.thisWeek": "săptămâna asta",

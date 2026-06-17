@@ -214,6 +214,46 @@ export const uk: Translation = {
 	"summary.hoursPerYear": "Годин на рік",
 	"summary.playsPerYear": "Прослуховувань на рік",
 
+	// --- Streak ------------------------------------------------------------
+	"streak.title": "Серія прослуховувань",
+	"streak.daysUnit_one": "день поспіль",
+	"streak.daysUnit_few": "дні поспіль",
+	"streak.daysUnit_many": "днів поспіль",
+	"streak.recordBadge": "🏆 Твоя найдовша серія за весь час",
+	"streak.behindRecord_one": "{n} день до твого рекорду ({best})",
+	"streak.behindRecord_few": "{n} дні до твого рекорду ({best})",
+	"streak.behindRecord_many": "{n} днів до твого рекорду ({best})",
+	"streak.asOf": "станом на {date}",
+
+	// --- Milestones --------------------------------------------------------
+	"milestone.title": "Наступні віхи",
+
+	// --- Pace --------------------------------------------------------------
+	"pace.title": "{year} поки що",
+	"pace.hoursThisYear": "годин цього року",
+	"pace.vsLastYear": "проти {hours} год на цей день торік",
+	"pace.onPace": "На шляху до ~{hours} год",
+	"pace.biggestYear": "твій найбільший рік",
+	"pace.plays": "{n} прослуховувань поки що",
+
+	// --- Discovery ---------------------------------------------------------
+	"discovery.title": "Нове у {year}",
+	"discovery.artists": "нових виконавців",
+	"discovery.tracks": "{n} нових треків",
+	"discovery.vsLastYear": "проти {n} на цей день торік",
+
+	// --- Personal records --------------------------------------------------
+	"records.title": "Особисті рекорди",
+	"records.biggestDay": "Найбільший день",
+	"records.hours": "{n} год",
+	"records.onRepeat": "Пісня на повторі",
+	"records.times": "{n}×",
+	"records.longestStreak": "Найдовша серія",
+	"records.daysInARow": "днів поспіль",
+	"records.longestLoop": "Програвань поспіль",
+	"records.discoveryYear": "Рік відкриттів",
+	"records.artistsIn": "нових виконавців у {year}",
+
 	// --- On this day -------------------------------------------------------
 	"onThisDay.title": "Цього дня",
 	"onThisDay.thisWeek": "цього тижня",

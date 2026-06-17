@@ -310,6 +310,59 @@ export type Story = {
 	devotion: StoryDevotion | null;
 };
 
+// Consecutive-listening-day streaks for the summary page. `current` is the run
+// ending on the most recent active day (`last_active`) — the export is static,
+// so it's anchored on the data, not wall-clock today. Null when the library is
+// empty. Dates are YYYY-MM-DD, local.
+export type Streak = {
+	current: number;
+	current_start: string;
+	longest: number;
+	longest_start: string;
+	longest_end: string;
+	last_active: string;
+};
+
+// This-year-to-date vs the same point last year, anchored on the data's latest
+// play (`doy` is that day-of-year). The view derives the ahead/behind verdict
+// and a year-end projection. Null when the library is empty.
+export type Pace = {
+	year: number;
+	doy: number;
+	this_plays: number;
+	this_hours: number;
+	prev_plays: number;
+	prev_hours: number;
+};
+
+// New artists/tracks first heard this (data-)year, the same point last year for
+// contrast, and the single biggest discovery year all-time (for the records
+// board). Null when empty.
+export type Discovery = {
+	year: number;
+	this_artists: number;
+	this_tracks: number;
+	prev_artists: number;
+	best_year: number;
+	best_count: number;
+};
+
+// The personal-bests board: biggest single day, most plays of one track in a
+// day, and the longest back-to-back repeat-one run. Streak record and biggest
+// discovery year are shown alongside but sourced from streak()/discovery().
+export type Records = {
+	day_date: string;
+	day_hours: number;
+	obs_uri: string;
+	obs_name: string;
+	obs_artist: string;
+	obs_plays: number;
+	loop_uri: string;
+	loop_name: string;
+	loop_artist: string;
+	loop_run: number;
+};
+
 export type RankDelta = { rank: number; prev_rank: number | null };
 
 export type YearTrackDelta = RankDelta & {
@@ -448,6 +501,10 @@ export const api = {
 
 	summary: () => q.summary(),
 	story: () => q.story(),
+	streak: () => q.streak(),
+	pace: () => q.pace(),
+	discovery: () => q.discovery(),
+	records: () => q.records(),
 
 	topTracks: (
 		metric: Metric,

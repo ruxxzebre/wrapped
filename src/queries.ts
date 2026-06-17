@@ -20,6 +20,13 @@ export const q = {
 		queryOptions({ queryKey: ["summary"] as const, queryFn: api.summary }),
 	story: () =>
 		queryOptions({ queryKey: ["story"] as const, queryFn: api.story }),
+	streak: () =>
+		queryOptions({ queryKey: ["streak"] as const, queryFn: api.streak }),
+	pace: () => queryOptions({ queryKey: ["pace"] as const, queryFn: api.pace }),
+	discovery: () =>
+		queryOptions({ queryKey: ["discovery"] as const, queryFn: api.discovery }),
+	records: () =>
+		queryOptions({ queryKey: ["records"] as const, queryFn: api.records }),
 	onThisDay: () =>
 		queryOptions({ queryKey: ["onThisDay"] as const, queryFn: api.onThisDay }),
 	allTracks: () =>
