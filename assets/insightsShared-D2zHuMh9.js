@@ -1,0 +1,1 @@
+import{_t as e,i as t,m as n}from"./ui-BzYpKcXw.js";var r=`kqrz9x0`,i=`kqrz9x1`,a=`kqrz9x2`,o=e();function s({title:e,lede:r,children:i}){return(0,o.jsxs)(n,{title:e,children:[r!=null&&(0,o.jsx)(`p`,{className:`kqrz9x0`,children:(0,o.jsx)(t,{size:`sm`,children:r})}),i]})}export{a as i,r as n,i as r,s as t};
