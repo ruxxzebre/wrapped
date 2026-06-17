@@ -422,11 +422,12 @@ export async function topTracks(
 	p: Period,
 	minMs: number,
 	limit: number,
+	offset = 0,
 ): Promise<TopTrack[]> {
 	const conds = ["ms_played >= ?"];
 	const args: unknown[] = [minMs];
 	periodWhere(p, conds, args);
-	args.push(limit);
+	args.push(limit, offset);
 	return query<TopTrack>(
 		`
 		SELECT track_uri,
@@ -437,8 +438,8 @@ export async function topTracks(
 		FROM listens
 		WHERE ${conds.join(" AND ")}
 		GROUP BY track_uri
-		ORDER BY ${METRICS[metric]} DESC
-		LIMIT ?`,
+		ORDER BY ${METRICS[metric]} DESC, track_uri
+		LIMIT ? OFFSET ?`,
 		args,
 	);
 }
@@ -448,11 +449,12 @@ export async function topArtists(
 	p: Period,
 	minMs: number,
 	limit: number,
+	offset = 0,
 ): Promise<TopArtist[]> {
 	const conds = ["ms_played >= ?", "artist_name IS NOT NULL"];
 	const args: unknown[] = [minMs];
 	periodWhere(p, conds, args);
-	args.push(limit);
+	args.push(limit, offset);
 	return query<TopArtist>(
 		`
 		SELECT artist_name                AS artist,
@@ -462,8 +464,8 @@ export async function topArtists(
 		FROM listens
 		WHERE ${conds.join(" AND ")}
 		GROUP BY artist_name
-		ORDER BY ${METRICS[metric]} DESC
-		LIMIT ?`,
+		ORDER BY ${METRICS[metric]} DESC, artist_name
+		LIMIT ? OFFSET ?`,
 		args,
 	);
 }
@@ -475,6 +477,7 @@ export async function topAlbums(
 	p: Period,
 	minMs: number,
 	limit: number,
+	offset = 0,
 ): Promise<TopAlbum[]> {
 	const conds = [
 		"ms_played >= ?",
@@ -483,7 +486,7 @@ export async function topAlbums(
 	];
 	const args: unknown[] = [minMs];
 	periodWhere(p, conds, args);
-	args.push(limit);
+	args.push(limit, offset);
 	return query<TopAlbum>(
 		`
 		SELECT album_name                 AS album,
@@ -494,8 +497,8 @@ export async function topAlbums(
 		FROM listens
 		WHERE ${conds.join(" AND ")}
 		GROUP BY album_name, artist_name
-		ORDER BY ${METRICS[metric]} DESC
-		LIMIT ?`,
+		ORDER BY ${METRICS[metric]} DESC, album_name, artist_name
+		LIMIT ? OFFSET ?`,
 		args,
 	);
 }

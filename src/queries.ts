@@ -1,10 +1,17 @@
-import { infiniteQueryOptions, queryOptions } from "@tanstack/react-query";
+import {
+	infiniteQueryOptions,
+	keepPreviousData,
+	queryOptions,
+} from "@tanstack/react-query";
 import { api, type Metric, type Period } from "./api";
 
 // Single source of truth for every query's key + fetcher. Route loaders and
 // view hooks both consume these factories, so a loader can never warm a key the
 // view then misses. Keys are `as const` tuples for type-checked invalidation,
 // and the data type flows from the fetcher through to useQuery automatically.
+
+// Page size for the infinitely-scrolled Top lists (artists/albums/tracks).
+const TOP_PAGE = 100;
 
 export const q = {
 	status: () =>
@@ -58,22 +65,40 @@ export const q = {
 			queryFn: () => api.year(year),
 		}),
 
-	// minMs is fixed at 30000 in the fetcher and intentionally absent from the
-	// key — mirrors the original TopArtists query so the cache aligns.
-	topArtists: (metric: Metric, period: Period, limit: number) =>
-		queryOptions({
-			queryKey: ["topArtists", metric, period, limit] as const,
-			queryFn: () => api.topArtists(metric, period, 30000, limit),
+	// The Top lists scroll infinitely: each page is a TOP_PAGE-sized window keyed
+	// off the running offset, so the view flatMaps pages and fetches the next as
+	// the table nears its end. minMs is fixed at 30000 in the fetcher and absent
+	// from the key — mirrors the original queries so the cache aligns. A short
+	// final page (fewer than TOP_PAGE rows) signals the end.
+	topArtists: (metric: Metric, period: Period) =>
+		infiniteQueryOptions({
+			queryKey: ["topArtists", metric, period] as const,
+			queryFn: ({ pageParam }) =>
+				api.topArtists(metric, period, 30000, TOP_PAGE, pageParam),
+			initialPageParam: 0,
+			getNextPageParam: (last, _all, lastParam) =>
+				last.length < TOP_PAGE ? undefined : lastParam + TOP_PAGE,
+			placeholderData: keepPreviousData,
 		}),
-	topAlbums: (metric: Metric, period: Period, limit: number) =>
-		queryOptions({
-			queryKey: ["topAlbums", metric, period, limit] as const,
-			queryFn: () => api.topAlbums(metric, period, 30000, limit),
+	topAlbums: (metric: Metric, period: Period) =>
+		infiniteQueryOptions({
+			queryKey: ["topAlbums", metric, period] as const,
+			queryFn: ({ pageParam }) =>
+				api.topAlbums(metric, period, 30000, TOP_PAGE, pageParam),
+			initialPageParam: 0,
+			getNextPageParam: (last, _all, lastParam) =>
+				last.length < TOP_PAGE ? undefined : lastParam + TOP_PAGE,
+			placeholderData: keepPreviousData,
 		}),
-	topTracks: (metric: Metric, period: Period, minMs: number, limit: number) =>
-		queryOptions({
-			queryKey: ["topTracks", metric, period, minMs, limit] as const,
-			queryFn: () => api.topTracks(metric, period, minMs, limit),
+	topTracks: (metric: Metric, period: Period, minMs: number) =>
+		infiniteQueryOptions({
+			queryKey: ["topTracks", metric, period, minMs] as const,
+			queryFn: ({ pageParam }) =>
+				api.topTracks(metric, period, minMs, TOP_PAGE, pageParam),
+			initialPageParam: 0,
+			getNextPageParam: (last, _all, lastParam) =>
+				last.length < TOP_PAGE ? undefined : lastParam + TOP_PAGE,
+			placeholderData: keepPreviousData,
 		}),
 
 	hourly: (period: Period) =>

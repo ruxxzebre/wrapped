@@ -134,7 +134,7 @@ const tracksRoute = createRoute({
 	staticData: { titleKey: "nav./top-tracks", tint: "neutral" },
 	loader: ({ context: { queryClient } }) =>
 		prefetch(queryClient, (qc) =>
-			qc.ensureQueryData(q.topTracks("plays", {}, 30000, 100)),
+			qc.ensureInfiniteQueryData(q.topTracks("plays", {}, 30000)),
 		),
 });
 const artistsRoute = createRoute({
@@ -144,7 +144,7 @@ const artistsRoute = createRoute({
 	staticData: { titleKey: "nav./top-artists", tint: "neutral" },
 	loader: ({ context: { queryClient } }) =>
 		prefetch(queryClient, (qc) =>
-			qc.ensureQueryData(q.topArtists("plays", {}, 100)),
+			qc.ensureInfiniteQueryData(q.topArtists("plays", {})),
 		),
 });
 const albumsRoute = createRoute({
@@ -154,7 +154,7 @@ const albumsRoute = createRoute({
 	staticData: { titleKey: "nav./top-albums", tint: "neutral" },
 	loader: ({ context: { queryClient } }) =>
 		prefetch(queryClient, (qc) =>
-			qc.ensureQueryData(q.topAlbums("plays", {}, 100)),
+			qc.ensureInfiniteQueryData(q.topAlbums("plays", {})),
 		),
 });
 const libraryRoute = createRoute({

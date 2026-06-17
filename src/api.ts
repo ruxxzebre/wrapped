@@ -34,8 +34,16 @@ export type TopArtist = {
 	tracks: number;
 };
 
+// Sentinel artist for compilations. The export carries no album id and writes a
+// different album-artist per track on a compilation, so we re-fuse such albums
+// by name (see db/queries `COMPILATION_NAMES`) and mark them with this value
+// instead of a real artist. The UI renders it as "Various Artists" and the
+// detail layer keys these albums by name alone.
+export const VARIOUS_ARTISTS = "__various_artists__";
+
 // An album row in the Top Albums list. Spotify exports carry no album id, so an
-// album is keyed by (artist, album) — both ride along for linking.
+// album is keyed by (artist, album) — both ride along for linking. A compilation
+// collapses to one row with artist === VARIOUS_ARTISTS.
 export type TopAlbum = {
 	album: string;
 	artist: string;
@@ -441,14 +449,29 @@ export const api = {
 	summary: () => q.summary(),
 	story: () => q.story(),
 
-	topTracks: (metric: Metric, p: Period, minMs: number, limit: number) =>
-		q.topTracks(metric, p, minMs, limit),
+	topTracks: (
+		metric: Metric,
+		p: Period,
+		minMs: number,
+		limit: number,
+		offset?: number,
+	) => q.topTracks(metric, p, minMs, limit, offset),
 
-	topArtists: (metric: Metric, p: Period, minMs: number, limit: number) =>
-		q.topArtists(metric, p, minMs, limit),
+	topArtists: (
+		metric: Metric,
+		p: Period,
+		minMs: number,
+		limit: number,
+		offset?: number,
+	) => q.topArtists(metric, p, minMs, limit, offset),
 
-	topAlbums: (metric: Metric, p: Period, minMs: number, limit: number) =>
-		q.topAlbums(metric, p, minMs, limit),
+	topAlbums: (
+		metric: Metric,
+		p: Period,
+		minMs: number,
+		limit: number,
+		offset?: number,
+	) => q.topAlbums(metric, p, minMs, limit, offset),
 
 	hourly: (p: Period) => q.hourly(p),
 	weekly: (p: Period) => q.weekly(p),
